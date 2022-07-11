@@ -2,12 +2,18 @@
 
 A simple framework to build a cli tool. Base on [`Alconna`](https://github/ArcletProject/Alconna)
 
+## install
+
+```powershell
+pip install cli-lite
+```
+
 ## example
 
 write as sample:
 
 ```python
-from litecli import BasePlugin, CommandLine, PluginMetadata
+from clilte import BasePlugin, CommandLine, PluginMetadata
 from arclet.alconna import Alconna, Arpamar, Args
 
 class MyPlugin(BasePlugin):

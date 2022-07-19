@@ -33,7 +33,7 @@ class BasePlugin(metaclass=ABCMeta):
     ):
         self.cli_name = cli_name
         self.version = version
-        self._command = self._init_command()
+        self._command = self._init_plugin()
         self._command.reset_namespace(cli_name)
         self._command.behaviors.append(_generate_behavior(self.dispatch))
         self._path = Path(__file__)
@@ -43,9 +43,9 @@ class BasePlugin(metaclass=ABCMeta):
         return self._command
 
     @abstractmethod
-    def _init_command(self) -> Alconna:
+    def _init_plugin(self) -> Alconna:
         """
-        命令创建方法, 该方法只会调用一次
+        插件创建方法, 该方法只会调用一次
         """
 
     @abstractmethod
@@ -65,11 +65,8 @@ _storage: Dict[str, List[Type[BasePlugin]]] = {}
 
 
 def register(target: str):
-    if target not in _storage:
-        _storage[target] = []
-
     def wrapper(cls: Type[BasePlugin]):
-        _storage[target].append(cls)
+        _storage.setdefault(target, []).append(cls)
         return cls
 
     return wrapper
@@ -129,3 +126,6 @@ class CommandLine:
         with self.using():
             for alc in command_manager.get_commands(namespace=self.name):
                 alc.parse(text)
+
+
+__all__ = ["PluginMetadata", "BasePlugin", "CommandLine", "register"]

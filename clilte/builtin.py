@@ -4,7 +4,7 @@ from .main import register, BasePlugin, PluginMetadata, CommandLine
 
 @register("*")
 class Help(BasePlugin):
-    def _init_command(self) -> Alconna:
+    def _init_plugin(self) -> Alconna:
         return Alconna(headers=["--help", "-h"], help_text="显示帮助")
 
     def dispatch(self, result: Arpamar):
@@ -23,7 +23,7 @@ class Help(BasePlugin):
 
 @register("*")
 class Version(BasePlugin):
-    def _init_command(self) -> Alconna:
+    def _init_plugin(self) -> Alconna:
         return Alconna(headers=["--version", "-v"], help_text="显示版本")
 
     def dispatch(self, result: Arpamar):

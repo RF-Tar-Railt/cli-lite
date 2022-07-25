@@ -1,8 +1,8 @@
-from typing import Tuple, Type, Dict, Optional, TypedDict, List, Callable, Any, Union
+from typing import Tuple, Type, Dict, Optional, TypedDict, List, Callable, Any, Union, TypeVar, overload
 from abc import ABCMeta, abstractmethod
 from importlib.metadata import entry_points
 from arclet.alconna import command_manager, Alconna, Arpamar, ArpamarBehavior
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 import sys
 from contextvars import ContextVar
@@ -62,6 +62,7 @@ class BasePlugin(metaclass=ABCMeta):
 
 
 _storage: Dict[str, List[Type[BasePlugin]]] = {}
+TPlugin = TypeVar("TPlugin", bound=BasePlugin)
 
 
 def register(target: str):
@@ -94,10 +95,11 @@ class CommandLine:
         yield
         cli_instance.reset(token)
 
-    def add(self, *plugin: Type[BasePlugin]):
-        for cls in plugin:
-            plg = cls(self.name, self.version)
+    def add(self, *plugin: Type[TPlugin]):
+        res: List[TPlugin] = [cls(self.name, self.version) for cls in plugin]
+        for plg in res:
             self.plugins[plg.command.name] = plg
+        return res
 
     def preset(self):
         for cls in (_storage.get(self.name, []) + _storage.get('*', [])):
@@ -106,6 +108,20 @@ class CommandLine:
     def load_entry(self):
         for entry in entry_points().get(f"litecli.{self.name}.plugins", []):
             self.add(entry.load())
+
+    @overload
+    def get_plugin(self, plg: Type[TPlugin], default=False) -> Optional[TPlugin]:
+        ...
+
+    @overload
+    def get_plugin(self, plg: Type[TPlugin], default=True) -> TPlugin:
+        ...
+
+    def get_plugin(self, plg: Type[TPlugin], default: bool = False) -> Optional[TPlugin]:
+        with suppress(StopIteration):
+            return next(filter(lambda x: isinstance(x, plg), self.plugins.values()))
+        if default:
+            return self.add(plg)[0]
 
     @property
     def help(self):

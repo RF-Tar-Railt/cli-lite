@@ -1,21 +1,34 @@
-from typing import Tuple, Type, Dict, Optional, TypedDict, List, Callable, Any, Union, TypeVar, overload
+from typing import (
+    Tuple,
+    Type,
+    Dict,
+    Optional,
+    List,
+    Callable,
+    Any,
+    Union,
+    TypeVar,
+    overload,
+)
 from abc import ABCMeta, abstractmethod
 from importlib.metadata import entry_points
 from arclet.alconna import command_manager, Alconna, Arpamar, ArpamarBehavior
 from contextlib import contextmanager, suppress
 from pathlib import Path
 import sys
+from dataclasses import dataclass, field
 from contextvars import ContextVar
 
-cli_instance: 'ContextVar[CommandLine]' = ContextVar("litecli")
+cli_instance: "ContextVar[CommandLine]" = ContextVar("litecli")
 
 
-class PluginMetadata(TypedDict):
+@dataclass
+class PluginMetadata:
     name: str
     version: str
-    tags: List[str]
-    author: List[str]
-    description: str
+    description: Optional[str] = field(default=None)
+    tags: List[str] = field(default_factory=list)
+    author: List[str] = field(default_factory=list)
 
 
 def _generate_behavior(func: Callable[[Arpamar], Any]) -> ArpamarBehavior:
@@ -26,13 +39,10 @@ def _generate_behavior(func: Callable[[Arpamar], Any]) -> ArpamarBehavior:
 
 
 class BasePlugin(metaclass=ABCMeta):
-    def __init__(
-            self,
-            cli_name: str,
-            version: Tuple[int, ...]
-    ):
+    def __init__(self, cli_name: str, cli_version: Tuple[int, ...]):
         self.cli_name = cli_name
-        self.version = version
+        self.cli_version = cli_version
+        self.metadata = self.meta()
         self._command = self._init_plugin()
         self._command.reset_namespace(cli_name)
         self._command.behaviors.append(_generate_behavior(self.dispatch))
@@ -79,10 +89,14 @@ class CommandLine:
     version: Tuple[int, int, int]
     plugins: Dict[str, BasePlugin]
 
-    def __init__(self, prefix: str, name: str, version: Union[str, Tuple[int, int, int]]):
+    def __init__(
+        self, prefix: str, name: str, version: Union[str, Tuple[int, int, int]]
+    ):
         self.prefix = prefix
         self.name = name
-        self.version = tuple(map(int, str.split('.'))) if isinstance(version, str) else version
+        self.version = (
+            tuple(map(int, str.split("."))) if isinstance(version, str) else version
+        )
         self.plugins = {}
 
     @classmethod
@@ -102,7 +116,7 @@ class CommandLine:
         return res
 
     def preset(self):
-        for cls in (_storage.get(self.name, []) + _storage.get('*', [])):
+        for cls in _storage.get(self.name, []) + _storage.get("*", []):
             self.add(cls)
 
     def load_entry(self):
@@ -117,11 +131,16 @@ class CommandLine:
     def get_plugin(self, plg: Type[TPlugin], default=True) -> TPlugin:
         ...
 
-    def get_plugin(self, plg: Type[TPlugin], default: bool = False) -> Optional[TPlugin]:
+    def get_plugin(
+        self, plg: Type[TPlugin], default: bool = False
+    ) -> Optional[TPlugin]:
         with suppress(StopIteration):
             return next(filter(lambda x: isinstance(x, plg), self.plugins.values()))
         if default:
             return self.add(plg)[0]
+
+    def query(self, *tag: str):
+        yield from filter(lambda x: set(x.metadata.tags).issuperset(tag), self.plugins.values())
 
     @property
     def help(self):

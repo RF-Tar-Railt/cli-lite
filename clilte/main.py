@@ -179,14 +179,14 @@ class CommandLine:
         for name, plg in self.plugins.items():
             if plg._command.headers and plg._command.command:
                 cmds.append(
-                    f"\t[{''.join(map(str, plg._command.headers))}]{plg._command.command}"
+                    f"[{''.join(map(str, plg._command.headers))}]{plg._command.command}"
                 )
             elif plg._command.headers:
                 cmds.append(
-                    f"\t{', '.join(sorted(map(str, plg._command.headers), key=len, reverse=True))}"
+                    f"[{', '.join(sorted(map(str, plg._command.headers), key=len, reverse=True))}"
                 )
             else:
-                cmds.append(f"\t{name}")
+                cmds.append(f"{name}")
             cmds_description.append(plg._command.meta.description)
         if cmds:
             max_len = max(max(map(len, cmds)), max_len)
@@ -195,29 +195,29 @@ class CommandLine:
         for name, opt in self.options.items():
             if opt._command.headers and opt._command.command:
                 opts.append(
-                    f"\t[{''.join(map(str, opt._command.headers))}]{opt._command.command}"
+                    f"[{''.join(map(str, opt._command.headers))}]{opt._command.command}"
                 )
             elif opt._command.headers:
                 opts.append(
-                    f"\t{', '.join(sorted(map(str, opt._command.headers), key=len, reverse=True))}"
+                    f"{', '.join(sorted(map(str, opt._command.headers), key=len, reverse=True))}"
                 )
             else:
-                opts.append(f"\t{name}")
+                opts.append(f"{name}")
             opts_description.append(opt._command.meta.description)
         if opts:
             max_len = max(max(map(len, opts)), max_len)
         cmd_string = "\n".join(
-            f"{i.ljust(max_len)}\t{j}" for i, j in zip(cmds, cmds_description)
+            f"    {i.ljust(max_len)}\t{j}" for i, j in zip(cmds, cmds_description)
         )
         opt_string = "\n".join(
-            f"{i.ljust(max_len)}\t{j}" for i, j in zip(opts, opts_description)
+            f"    {i.ljust(max_len)}\t{j}" for i, j in zip(opts, opts_description)
         )
         cmd_help = "Commands:\n" if cmd_string else ""
         opt_help = "Options:\n" if opt_string else ""
         return (
             f"{self.name}\n\n"
             f"{cmd_help}{cmd_string}\n{opt_help}{opt_string}\n\n"
-            f"Invoke '$command --help | -h' to get usage of special command"
+            "Use '$ <command> --help | -h' for more information about a command."
         )
 
     def main(self, args: list[str] | None = None):

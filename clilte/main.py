@@ -1,82 +1,89 @@
-from typing import (
-    Tuple,
-    Type,
-    Dict,
-    Optional,
-    List,
-    Callable,
-    Any,
-    Union,
-    TypeVar,
-    overload,
-)
-from abc import ABCMeta, abstractmethod
-from importlib.metadata import entry_points
-from arclet.alconna import command_manager, Alconna, Arpamar, ArpamarBehavior
-from contextlib import contextmanager, suppress
-from pathlib import Path
-import sys
-from dataclasses import dataclass, field
-from contextvars import ContextVar
+from __future__ import annotations
 
-cli_instance: "ContextVar[CommandLine]" = ContextVar("litecli")
+import sys
+from abc import ABCMeta, abstractmethod
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass, field
+from importlib.metadata import entry_points
+from typing import Any, Callable, TypeVar, overload, Literal
+
+from arclet.alconna import (
+    Alconna,
+    Arparma,
+    ArparmaBehavior,
+    command_manager,
+    namespace,
+    output_manager,
+)
+from arclet.alconna.tools import ArgParserTextFormatter
+
+cli_instance: ContextVar[CommandLine] = ContextVar("litecli")
 
 
 @dataclass
-class PluginMetadata:
+class CommandMetadata:
     name: str
     version: str
-    description: Optional[str] = field(default=None)
-    tags: List[str] = field(default_factory=list)
-    author: List[str] = field(default_factory=list)
+    description: str | None = field(default=None)
+    tags: list[str] = field(default_factory=list)
+    author: list[str] = field(default_factory=list)
 
 
-def _generate_behavior(func: Callable[[Arpamar], Any]) -> ArpamarBehavior:
-    class _(ArpamarBehavior):
+def _generate_behavior(func: Callable[[Arparma], Any]) -> ArparmaBehavior:
+    class _(ArparmaBehavior):
         operate = staticmethod(func)
 
     return _()
 
 
-class BasePlugin(metaclass=ABCMeta):
-    def __init__(self, cli_name: str, cli_version: Tuple[int, ...]):
-        self.cli_name = cli_name
-        self.cli_version = cli_version
+class BaseCommand(metaclass=ABCMeta):
+    _option = False
+
+    def __init__(self):
         self.metadata = self.meta()
-        self._command = self._init_plugin()
-        self._command.reset_namespace(cli_name)
+        self._command = self.init_plugin()
+        self._command.reset_namespace(
+            cli_instance.get().prefix, not self.__class__._option
+        )
         self._command.behaviors.append(_generate_behavior(self.dispatch))
-        self._path = Path(__file__)
+        if not self._command.meta.description or self._command.meta.description == "Unknown":
+            self._command.meta = self.metadata.description or self.metadata.name or "Unknown"
+
+    def __init_subclass__(cls, **kwargs):
+        if kwargs.get("option", False):
+            cls._option = True
+        super().__init_subclass__()
 
     @property
     def command(self) -> Alconna:
         return self._command
 
     @abstractmethod
-    def _init_plugin(self) -> Alconna:
+    def init_plugin(self) -> Alconna:
         """
         插件创建方法, 该方法只会调用一次
         """
 
     @abstractmethod
-    def dispatch(self, result: Arpamar):
+    def dispatch(self, result: Arparma):
         """
         当该插件命令解析成功后该方法负责将解析结果分发给指定的处理函数
         """
 
     @abstractmethod
-    def meta(self) -> PluginMetadata:
+    def meta(self) -> CommandMetadata:
         """
         提供描述信息的方法
         """
 
 
-_storage: Dict[str, List[Type[BasePlugin]]] = {}
-TPlugin = TypeVar("TPlugin", bound=BasePlugin)
+_storage: dict[str, list[type[BaseCommand]]] = {}
+TPlugin = TypeVar("TPlugin", bound=BaseCommand)
 
 
 def register(target: str):
-    def wrapper(cls: Type[BasePlugin]):
+    def wrapper(cls: type[BaseCommand]):
         _storage.setdefault(target, []).append(cls)
         return cls
 
@@ -86,18 +93,33 @@ def register(target: str):
 class CommandLine:
     prefix: str
     name: str
-    version: Tuple[int, int, int]
-    plugins: Dict[str, BasePlugin]
+    version: tuple[int, int, int]
+    plugins: dict[str, BaseCommand]
+    options: dict[str, BaseCommand]
 
     def __init__(
-        self, prefix: str, name: str, version: Union[str, Tuple[int, int, int]]
+        self,
+        prefix: str,
+        name: str,
+        version: str | tuple[int, int, int],
+        fuzzy_match: bool = False,
+        argparser_formatter: bool = False,
+        load_preset: bool = True,
     ):
-        self.prefix = prefix
+        self.prefix = prefix.lower().replace(" ", "_")
         self.name = name
         self.version = (
-            tuple(map(int, str.split("."))) if isinstance(version, str) else version
+            tuple(map(int, version.split("."))) if isinstance(version, str) else version
         )
         self.plugins = {}
+        self.options = {}
+        self.load_preset = load_preset
+        with namespace(prefix) as np:
+            np.headers = []
+            np.separators = (" ",)
+            np.fuzzy_match = fuzzy_match
+            if argparser_formatter:
+                np.formatter_type = ArgParserTextFormatter
 
     @classmethod
     def current(cls):
@@ -109,14 +131,24 @@ class CommandLine:
         yield
         cli_instance.reset(token)
 
-    def add(self, *plugin: Type[TPlugin]):
-        res: List[TPlugin] = [cls(self.name, self.version) for cls in plugin]
+    def add(self, *plugin: type[TPlugin]):
+        with self.using():
+            res: list[TPlugin] = [cls() for cls in plugin]
         for plg in res:
-            self.plugins[plg.command.name] = plg
+            if plg._option:
+                self.options[plg.command.name] = plg
+            else:
+                self.plugins[plg.command.name] = plg
         return res
 
     def preset(self):
-        for cls in _storage.get(self.name, []) + _storage.get("*", []):
+        for cls in _storage.get(self.prefix, []) + _storage.get("*", []):
+            self.add(cls)
+
+    def load_register(self, target: str):
+        if target in (self.prefix, "*"):
+            return
+        for cls in _storage.get(target, []):
             self.add(cls)
 
     def load_entry(self):
@@ -124,34 +156,75 @@ class CommandLine:
             self.add(entry.load())
 
     @overload
-    def get_plugin(self, plg: Type[TPlugin], default=False) -> Optional[TPlugin]:
+    def get_plugin(self, plg: type[TPlugin], default: Literal[True]) -> TPlugin:
         ...
 
-    @overload
-    def get_plugin(self, plg: Type[TPlugin], default=True) -> TPlugin:
-        ...
-
-    def get_plugin(
-        self, plg: Type[TPlugin], default: bool = False
-    ) -> Optional[TPlugin]:
-        with suppress(StopIteration):
-            return next(filter(lambda x: isinstance(x, plg), self.plugins.values()))
-        if default:
-            return self.add(plg)[0]
+    def get_plugin(self, plg: type[TPlugin], default: bool = False) -> TPlugin | None:
+        return next(
+            filter(lambda x: isinstance(x, plg), self.plugins.values()),
+            self.add(plg)[0] if default else None,
+        )
 
     def query(self, *tag: str):
-        yield from filter(lambda x: set(x.metadata.tags).issuperset(tag), self.plugins.values())
+        yield from filter(
+            lambda x: set(x.metadata.tags).issuperset(tag), self.plugins.values()
+        )
 
     @property
     def help(self):
-        return f"{self.name} {'.'.join(map(str, self.version))}\n{command_manager.all_command_help(namespace=self.name)}"
+        cmds = []
+        cmds_description = []
+        max_len = 1
+        res = f"{self.name}\n"
+        for name, plg in self.plugins.items():
+            if plg._command.headers and plg._command.command:
+                cmds.append(
+                    f"\t[{''.join(map(str, plg._command.headers))}]{plg._command.command}"
+                )
+            elif plg._command.headers:
+                cmds.append(
+                    f"\t{', '.join(sorted(map(str, plg._command.headers), key=len, reverse=True))}"
+                )
+            else:
+                cmds.append(f"\t{name}")
+            cmds_description.append(plg._command.meta.description)
+        if cmds:
+            max_len = max(max(map(len, cmds)), max_len)
+        opts = []
+        opts_description = []
+        for name, opt in self.options.items():
+            if opt._command.headers and opt._command.command:
+                opts.append(
+                    f"\t[{''.join(map(str, opt._command.headers))}]{opt._command.command}"
+                )
+            elif opt._command.headers:
+                opts.append(
+                    f"\t{', '.join(sorted(map(str, opt._command.headers), key=len, reverse=True))}"
+                )
+            else:
+                opts.append(f"\t{name}")
+            opts_description.append(opt._command.meta.description)
+        if opts:
+            max_len = max(max(map(len, opts)), max_len)
+        cmd_string = "\n".join(
+            f"{i.ljust(max_len)}\t{j}" for i, j in zip(cmds, cmds_description)
+        )
+        opt_string = "\n".join(
+            f"{i.ljust(max_len)}\t{j}" for i, j in zip(opts, opts_description)
+        )
+        cmd_help = "Commands:\n" if cmd_string else ""
+        opt_help = "Options:\n" if opt_string else ""
+        return (
+            f"{self.name}\n\n"
+            f"{cmd_help}{cmd_string}\n{opt_help}{opt_string}\n\n"
+            f"Invoke '$command --help | -h' to get usage of special command"
+        )
 
-    def main(self, args: Optional[List[str]] = None, load_preset: bool = False):
-        if load_preset:
+    def main(self, args: list[str] | None = None):
+        if self.load_preset:
             self.preset()
         self.load_entry()
-        if args is None:
-            args = sys.argv[1:]
+        args = sys.argv[1:] or args
         if args and args[0] == self.prefix:
             args.pop(0)
         if not args:
@@ -159,8 +232,32 @@ class CommandLine:
             return
         text = " ".join(args)
         with self.using():
-            for alc in command_manager.get_commands(namespace=self.name):
-                alc.parse(text)
+            for alc in command_manager.get_commands(namespace=self.prefix):
+                may_output_text = None
+
+                def _h(string):
+                    nonlocal may_output_text
+                    may_output_text = string
+
+                output_manager.set_action(_h, alc.name)
+                try:
+                    _res = alc.parse(text)
+                except Exception as e:
+                    _res = Arparma(alc.path, text)
+                    _res.head_matched = False
+                    _res.matched = False
+                    _res.error_info = repr(e)
+                if not may_output_text and not _res.matched and not _res.head_matched:
+                    continue
+                if not may_output_text and _res.error_info:
+                    may_output_text = f"{self.name}\n\n{alc.get_help()}"
+                if not may_output_text and _res.matched:
+                    break
+                if may_output_text:
+                    print(may_output_text)
+                    break
+            else:
+                print(self.help)
 
 
-__all__ = ["PluginMetadata", "BasePlugin", "CommandLine", "register"]
+__all__ = ["CommandMetadata", "BaseCommand", "CommandLine", "register"]

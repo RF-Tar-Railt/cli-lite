@@ -1,0 +1,41 @@
+[project]
+name = "cli-lite"
+version = "0.4.0"
+description = "A simple framework to build a cli tool, base on Alconna"
+authors = [
+    {name = "RF-Tar-Railt",email = "rf_tar_railt@qq.com"}
+]
+dependencies = [
+    "arclet-alconna>=1.4.3",
+    "arclet-alconna-tools>=0.3.3",
+]
+requires-python = ">=3.8"
+readme = "README.md"
+license = {text = "MIT"}
+keywords = ["commandline", "cli-tool", "plugin", "cli", "litecli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+]
+[project.urls]
+Homepage = "https://github.com/RF-Tar-Railt/cli-lite"
+"Bug Reports" = "https://github.com/RF-Tar-Railt/cli-lite/issues"
+Source = "https://github.com/RF-Tar-Railt/cli-lite"
+
+[project.optional-dependencies]
+[tool.pdm]
+[tool.pdm.build]
+includes = ["clilite"]
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "fix-future-annotations>=0.5.0",
+]
+[build-system]
+requires = ["pdm-pep517>=1.0.0"]
+build-backend = "pdm.pep517.api"

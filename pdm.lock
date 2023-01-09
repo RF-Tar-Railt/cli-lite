@@ -1,0 +1,90 @@
+[[package]]
+name = "arclet-alconna"
+version = "1.4.3"
+requires_python = ">=3.8"
+summary = "A High-performance, Generality, Humane Command Line Arguments Parser Library."
+dependencies = [
+    "nepattern>=0.3.2",
+    "typing-extensions~=4.4.0",
+]
+
+[[package]]
+name = "arclet-alconna-tools"
+version = "0.3.3"
+requires_python = ">=3.8"
+summary = "Builtin Tools for Alconna"
+dependencies = [
+    "arclet-alconna>=1.4.3",
+    "nepattern>=0.3.2",
+]
+
+[[package]]
+name = "fix-future-annotations"
+version = "0.5.0"
+requires_python = ">=3.8"
+summary = "A CLI and pre-commit hook to upgrade the typing annotations syntax to PEP 585 and PEP 604"
+dependencies = [
+    "tokenize-rt>=5.0.0",
+    "tomli; python_version < \"3.11\"",
+]
+
+[[package]]
+name = "nepattern"
+version = "0.4.2"
+requires_python = ">=3.8"
+summary = "a complex pattern, support typing"
+dependencies = [
+    "typing-extensions~=4.4.0",
+]
+
+[[package]]
+name = "tokenize-rt"
+version = "5.0.0"
+requires_python = ">=3.7"
+summary = "A wrapper around the stdlib `tokenize` which roundtrips."
+
+[[package]]
+name = "tomli"
+version = "2.0.1"
+requires_python = ">=3.7"
+summary = "A lil' TOML parser"
+
+[[package]]
+name = "typing-extensions"
+version = "4.4.0"
+requires_python = ">=3.7"
+summary = "Backported and Experimental Type Hints for Python 3.7+"
+
+[metadata]
+lock_version = "4.0"
+content_hash = "sha256:e1d1b50a2a0686899da3c1baf00948378f65097aeae92f6de050cacc2ac82b10"
+
+[metadata.files]
+"arclet-alconna 1.4.3" = [
+    {url = "https://files.pythonhosted.org/packages/5b/06/e26ab877bf23b2fd488c720a5803e54f92c86af2eb544f87653767d2c2af/arclet_alconna-1.4.3-py3-none-any.whl", hash = "sha256:642a04072b0ca4b17909a07bfaa14c75ec2924f9d076b65b8c89f1223c96eb87"},
+    {url = "https://files.pythonhosted.org/packages/75/01/ea37adcc68edad1a15f44fb645ab1b4c484b5aafe0a73c2d20748f810fb7/arclet-alconna-1.4.3.tar.gz", hash = "sha256:651563d8a54b20a2541ad3088bc5b8c123aeb44676bdece02540ddd7b1f9ce6b"},
+]
+"arclet-alconna-tools 0.3.3" = [
+    {url = "https://files.pythonhosted.org/packages/a9/58/0b73cf1ed59cf85b56d90268ad45ec72df9fe880f52df0b7e5c49ee64fe6/arclet-alconna-tools-0.3.3.tar.gz", hash = "sha256:a9c29a70c0ba4b836eef06862a333663d5cad7c0c241201ac4078cde026060ea"},
+    {url = "https://files.pythonhosted.org/packages/dd/6e/0aa68b6bcc8852b0e9e9f03f43424444a111a6fa87937e5ac447ab0f90ab/arclet_alconna_tools-0.3.3-py3-none-any.whl", hash = "sha256:226642324c41e0a23be47846a64268a685e1f316639e82850aa2a1388b6eb35f"},
+]
+"fix-future-annotations 0.5.0" = [
+    {url = "https://files.pythonhosted.org/packages/15/56/d5ebafd3f1c46b43d5edd491359a870e224613ada3d1b6358a114d68d59e/fix-future-annotations-0.5.0.tar.gz", hash = "sha256:666bf5fd09068f3403b34b2dc69844955a4a7bac4df28dd345183bd18172cbfd"},
+    {url = "https://files.pythonhosted.org/packages/19/eb/7f2e259f542145d7bc4f4d664b7d9dedfa9da6ac564efeac3c5e6fa2cb33/fix_future_annotations-0.5.0-py3-none-any.whl", hash = "sha256:45b5e73b36c514a23c2fbb2b7ff26448496399bda3b98a7b78a14439639f2e59"},
+]
+"nepattern 0.4.2" = [
+    {url = "https://files.pythonhosted.org/packages/8f/64/4cba8d82eeedaa7b58ddd819de317d82b7a70c1764b6ef9474ec7f3f3ea2/nepattern-0.4.2-py3-none-any.whl", hash = "sha256:427520c2ee475dcd7b9f852673b0a26f5396cb4742a65526a636e8d0917defea"},
+    {url = "https://files.pythonhosted.org/packages/ea/70/77d40ee05885c5db32dee73ba1f893ed7f4c4b24c31108e710f5fd80071f/nepattern-0.4.2.tar.gz", hash = "sha256:3f722cf32890a016db3089818933617e73042356a8dad7a8d8ebba0dbce7731c"},
+]
+"tokenize-rt 5.0.0" = [
+    {url = "https://files.pythonhosted.org/packages/40/01/fb40ea8c465f680bf7aa3f5bee39c62ba8b7f52c38048c27aa95aff4f779/tokenize_rt-5.0.0.tar.gz", hash = "sha256:3160bc0c3e8491312d0485171dea861fc160a240f5f5766b72a1165408d10740"},
+    {url = "https://files.pythonhosted.org/packages/8d/12/4c7495f25b4c9131706f3aaffb185d4de32c02a6ee49d875e929c5b7c919/tokenize_rt-5.0.0-py2.py3-none-any.whl", hash = "sha256:c67772c662c6b3dc65edf66808577968fb10badfc2042e3027196bed4daf9e5a"},
+]
+"tomli 2.0.1" = [
+    {url = "https://files.pythonhosted.org/packages/97/75/10a9ebee3fd790d20926a90a2547f0bf78f371b2f13aa822c759680ca7b9/tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},
+    {url = "https://files.pythonhosted.org/packages/c0/3f/d7af728f075fb08564c5949a9c95e44352e23dee646869fa104a3b2060a3/tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
+]
+"typing-extensions 4.4.0" = [
+    {url = "https://files.pythonhosted.org/packages/0b/8e/f1a0a5a76cfef77e1eb6004cb49e5f8d72634da638420b9ea492ce8305e8/typing_extensions-4.4.0-py3-none-any.whl", hash = "sha256:16fa4864408f655d35ec496218b85f79b3437c829e93320c7c9215ccfd92489e"},
+    {url = "https://files.pythonhosted.org/packages/e3/a7/8f4e456ef0adac43f452efc2d0e4b242ab831297f1bac60ac815d37eb9cf/typing_extensions-4.4.0.tar.gz", hash = "sha256:1511434bb92bf8dd198c12b1cc812e800d4181cfcb867674e0f8279cc93087aa"},
+]

@@ -42,22 +42,18 @@ class BaseCommand(metaclass=ABCMeta):
 
     def __init__(self):
         self.metadata = self.meta()
-        self._command = self.init_plugin()
-        self._command.reset_namespace(
+        self.command = self.init_plugin()
+        self.command.reset_namespace(
             cli_instance.get().prefix, not self.__class__._option
         )
-        self._command.behaviors.append(_generate_behavior(self.dispatch))
-        if not self._command.meta.description or self._command.meta.description == "Unknown":
-            self._command.meta = self.metadata.description or self.metadata.name or "Unknown"
+        self.command.behaviors.append(_generate_behavior(self.dispatch))
+        if not self.command.meta.description or self.command.meta.description == "Unknown":
+            self.command.meta = self.metadata.description or self.metadata.name or "Unknown"
 
     def __init_subclass__(cls, **kwargs):
         if kwargs.get("option", False):
             cls._option = True
         super().__init_subclass__()
-
-    @property
-    def command(self) -> Alconna:
-        return self._command
 
     @abstractmethod
     def init_plugin(self) -> Alconna:
@@ -89,6 +85,54 @@ def register(target: str):
 
     return wrapper
 
+def generate_help(cli: 'CommandLine'):
+    cmds = []
+    cmds_description = []
+    max_len = 1
+    for name, plg in cli.plugins.items():
+        if plg.command.headers and plg.command.command:
+            cmds.append(
+                f"[{''.join(map(str, plg.command.headers))}]{plg.command.command}"
+            )
+        elif plg.command.headers:
+            cmds.append(
+                f"[{', '.join(sorted(map(str, plg.command.headers), key=len, reverse=True))}"
+            )
+        else:
+            cmds.append(f"{name}")
+        cmds_description.append(plg.command.meta.description)
+    if cmds:
+        max_len = max(max(map(len, cmds)), max_len)
+    opts = []
+    opts_description = []
+    for name, opt in cli.options.items():
+        if opt.command.headers and opt.command.command:
+            opts.append(
+                f"[{''.join(map(str, opt.command.headers))}]{opt.command.command}"
+            )
+        elif opt.command.headers:
+            opts.append(
+                f"{', '.join(sorted(map(str, opt.command.headers), key=len))}"
+            )
+        else:
+            opts.append(f"{name}")
+        opts_description.append(opt.command.meta.description)
+    if opts:
+        max_len = max(max(map(len, opts)), max_len)
+    cmd_string = "\n".join(
+        f"    {i.ljust(max_len)}\t{j}" for i, j in zip(cmds, cmds_description)
+    )
+    opt_string = "\n".join(
+        f"    {i.ljust(max_len)}\t{j}" for i, j in zip(opts, opts_description)
+    )
+    cmd_help = "Commands:\n" if cmd_string else ""
+    opt_help = "Options:\n" if opt_string else ""
+    return (
+        f"{cli.name}\n\n"
+        f"{cmd_help}{cmd_string}\n{opt_help}{opt_string}\n\n"
+        "Use '$ <command> --help | -h' for more information about a command."
+    )
+
 
 class CommandLine:
     prefix: str
@@ -105,6 +149,7 @@ class CommandLine:
         fuzzy_match: bool = False,
         argparser_formatter: bool = False,
         load_preset: bool = True,
+        helper: Callable[['CommandLine'], str] = generate_help,
     ):
         self.prefix = prefix.lower().replace(" ", "_")
         self.name = name
@@ -114,6 +159,7 @@ class CommandLine:
         self.plugins = {}
         self.options = {}
         self.load_preset = load_preset
+        self.helper = helper
         with namespace(prefix) as np:
             np.headers = []
             np.separators = (" ",)
@@ -172,53 +218,7 @@ class CommandLine:
 
     @property
     def help(self):
-        cmds = []
-        cmds_description = []
-        max_len = 1
-        res = f"{self.name}\n"
-        for name, plg in self.plugins.items():
-            if plg._command.headers and plg._command.command:
-                cmds.append(
-                    f"[{''.join(map(str, plg._command.headers))}]{plg._command.command}"
-                )
-            elif plg._command.headers:
-                cmds.append(
-                    f"[{', '.join(sorted(map(str, plg._command.headers), key=len, reverse=True))}"
-                )
-            else:
-                cmds.append(f"{name}")
-            cmds_description.append(plg._command.meta.description)
-        if cmds:
-            max_len = max(max(map(len, cmds)), max_len)
-        opts = []
-        opts_description = []
-        for name, opt in self.options.items():
-            if opt._command.headers and opt._command.command:
-                opts.append(
-                    f"[{''.join(map(str, opt._command.headers))}]{opt._command.command}"
-                )
-            elif opt._command.headers:
-                opts.append(
-                    f"{', '.join(sorted(map(str, opt._command.headers), key=len, reverse=True))}"
-                )
-            else:
-                opts.append(f"{name}")
-            opts_description.append(opt._command.meta.description)
-        if opts:
-            max_len = max(max(map(len, opts)), max_len)
-        cmd_string = "\n".join(
-            f"    {i.ljust(max_len)}\t{j}" for i, j in zip(cmds, cmds_description)
-        )
-        opt_string = "\n".join(
-            f"    {i.ljust(max_len)}\t{j}" for i, j in zip(opts, opts_description)
-        )
-        cmd_help = "Commands:\n" if cmd_string else ""
-        opt_help = "Options:\n" if opt_string else ""
-        return (
-            f"{self.name}\n\n"
-            f"{cmd_help}{cmd_string}\n{opt_help}{opt_string}\n\n"
-            "Use '$ <command> --help | -h' for more information about a command."
-        )
+        return self.helper(self)
 
     def main(self, args: list[str] | None = None):
         if self.load_preset:

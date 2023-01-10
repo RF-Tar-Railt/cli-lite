@@ -4,7 +4,7 @@ import sys
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar
 from importlib.metadata import entry_points
 from typing import Any, Callable, TypeVar, overload, Literal
 
@@ -25,7 +25,7 @@ cli_instance: ContextVar[CommandLine] = ContextVar("litecli")
 class CommandMetadata:
     name: str
     version: str
-    description: str | None = field(default=None)
+    description: str = field(default="Unknown")
     tags: list[str] = field(default_factory=list)
     author: list[str] = field(default_factory=list)
 
@@ -42,13 +42,18 @@ class BaseCommand(metaclass=ABCMeta):
 
     def __init__(self):
         self.metadata = self.meta()
-        self.command = self.init_plugin()
+        self.command = self.init()
         self.command.reset_namespace(
             cli_instance.get().prefix, not self.__class__._option
         )
         self.command.behaviors.append(_generate_behavior(self.dispatch))
-        if not self.command.meta.description or self.command.meta.description == "Unknown":
-            self.command.meta = self.metadata.description or self.metadata.name or "Unknown"
+        if (
+            not self.command.meta.description
+            or self.command.meta.description == "Unknown"
+        ):
+            self.command.meta = (
+                self.metadata.description or self.metadata.name or "Unknown"
+            )
 
     def __init_subclass__(cls, **kwargs):
         if kwargs.get("option", False):
@@ -56,7 +61,7 @@ class BaseCommand(metaclass=ABCMeta):
         super().__init_subclass__()
 
     @abstractmethod
-    def init_plugin(self) -> Alconna:
+    def init(self) -> Alconna:
         """
         插件创建方法, 该方法只会调用一次
         """
@@ -75,7 +80,7 @@ class BaseCommand(metaclass=ABCMeta):
 
 
 _storage: dict[str, list[type[BaseCommand]]] = {}
-TPlugin = TypeVar("TPlugin", bound=BaseCommand)
+TCommand = TypeVar("TCommand", bound=BaseCommand)
 
 
 def register(target: str):
@@ -85,82 +90,71 @@ def register(target: str):
 
     return wrapper
 
-def generate_help(cli: 'CommandLine'):
-    cmds = []
-    cmds_description = []
-    max_len = 1
-    for name, plg in cli.plugins.items():
-        if plg.command.headers and plg.command.command:
-            cmds.append(
-                f"[{''.join(map(str, plg.command.headers))}]{plg.command.command}"
-            )
-        elif plg.command.headers:
-            cmds.append(
-                f"[{', '.join(sorted(map(str, plg.command.headers), key=len, reverse=True))}"
-            )
-        else:
-            cmds.append(f"{name}")
-        cmds_description.append(plg.command.meta.description)
-    if cmds:
-        max_len = max(max(map(len, cmds)), max_len)
-    opts = []
-    opts_description = []
-    for name, opt in cli.options.items():
-        if opt.command.headers and opt.command.command:
-            opts.append(
-                f"[{''.join(map(str, opt.command.headers))}]{opt.command.command}"
-            )
-        elif opt.command.headers:
-            opts.append(
-                f"{', '.join(sorted(map(str, opt.command.headers), key=len))}"
-            )
-        else:
-            opts.append(f"{name}")
-        opts_description.append(opt.command.meta.description)
-    if opts:
-        max_len = max(max(map(len, opts)), max_len)
-    cmd_string = "\n".join(
-        f"    {i.ljust(max_len)}\t{j}" for i, j in zip(cmds, cmds_description)
-    )
-    opt_string = "\n".join(
-        f"    {i.ljust(max_len)}\t{j}" for i, j in zip(opts, opts_description)
-    )
-    cmd_help = "Commands:\n" if cmd_string else ""
-    opt_help = "Options:\n" if opt_string else ""
-    return (
-        f"{cli.name}\n\n"
-        f"{cmd_help}{cmd_string}\n{opt_help}{opt_string}\n\n"
-        "Use '$ <command> --help | -h' for more information about a command."
-    )
+
+@dataclass
+class Helper:
+    cli: CommandLine
+
+    def cmds(self):
+        yield from self.cli.commands.keys()
+
+    def cmd_descriptions(self):
+        for cmd in self.cli.commands.values():
+            yield cmd.metadata.description
+
+    def opts(self):
+        for name, opt in self.cli.options.items():
+            if opt.command.headers and opt.command.command:
+                yield f"[{''.join(map(str, opt.command.headers))}]{opt.command.command}"
+            elif opt.command.headers:
+                yield f"{', '.join(sorted(map(str, opt.command.headers), key=len))}"
+            else:
+                yield name
+
+    def opts_descriptions(self):
+        for opt in self.cli.commands.values():
+            yield opt.metadata.description
+
+    def cmd_line(self, name, desc, max_len: int = 0):
+        return f"  {name:<{max_len}}    {desc}"
+
+    def opt_line(self, name, desc, max_len: int = 0):
+        return f"  {name:<{max_len}}    {desc}"
+
+    def help(self):
+        cmds, opts, = list(self.cmds()), list(self.opts())
+        cmd_desc, opt_desc = list(self.cmd_descriptions()), list(self.opts_descriptions())
+        max_len = max(max(map(len, cmds or [''])), max(map(len, opts or [''])))
+        cmd_string = "\n".join(self.cmd_line(i, j, max_len) for i, j in zip(cmds, cmd_desc))
+        opt_string = "\n".join(self.opt_line(i, j, max_len) for i, j in zip(opts, opt_desc))
+        return (
+            f"{self.cli.name}\n"
+            f"\n"
+            f"Commands:\n{cmd_string}\n"
+            f"Options:\n{opt_string}\n"
+            f"\n"
+            f"Use '{self.cli.prefix} <command> --help' for more information about a command."
+        )
 
 
+@dataclass(repr=True)
 class CommandLine:
     prefix: str
     name: str
-    version: tuple[int, int, int]
-    plugins: dict[str, BaseCommand]
-    options: dict[str, BaseCommand]
+    version: str
+    output_action: Callable[[str], ...] = field(default=lambda x: print(x))
+    load_preset: bool = field(default=True)
+    fuzzy_match: InitVar[bool] = field(default=False)
+    argparser_formatter: InitVar[bool] = field(default=False)
+    _helper: InitVar[type[Helper]] = field(default=Helper)
+    helper: Helper = field(init=False)
+    commands: dict[str, BaseCommand] = field(init=False, default_factory=dict)
+    options: dict[str, BaseCommand] = field(init=False, default_factory=dict)
 
-    def __init__(
-        self,
-        prefix: str,
-        name: str,
-        version: str | tuple[int, int, int],
-        fuzzy_match: bool = False,
-        argparser_formatter: bool = False,
-        load_preset: bool = True,
-        helper: Callable[['CommandLine'], str] = generate_help,
-    ):
-        self.prefix = prefix.lower().replace(" ", "_")
-        self.name = name
-        self.version = (
-            tuple(map(int, version.split("."))) if isinstance(version, str) else version
-        )
-        self.plugins = {}
-        self.options = {}
-        self.load_preset = load_preset
-        self.helper = helper
-        with namespace(prefix) as np:
+    def __post_init__(self, fuzzy_match: bool, argparser_formatter: bool, _helper: type[Helper]):
+        self.prefix = self.prefix.lower().replace(" ", "_")
+        self.helper = _helper(self)
+        with namespace(self.prefix) as np:
             np.headers = []
             np.separators = (" ",)
             np.fuzzy_match = fuzzy_match
@@ -177,14 +171,14 @@ class CommandLine:
         yield
         cli_instance.reset(token)
 
-    def add(self, *plugin: type[TPlugin]):
+    def add(self, *command: type[TCommand]):
         with self.using():
-            res: list[TPlugin] = [cls() for cls in plugin]
+            res: list[TCommand] = [cls() for cls in command]
         for plg in res:
-            if plg._option:
+            if plg._option or plg.command.command.startswith("-"):
                 self.options[plg.command.name] = plg
             else:
-                self.plugins[plg.command.name] = plg
+                self.commands[plg.command.name] = plg
         return res
 
     def preset(self):
@@ -202,23 +196,23 @@ class CommandLine:
             self.add(entry.load())
 
     @overload
-    def get_plugin(self, plg: type[TPlugin], default: Literal[True]) -> TPlugin:
+    def get_command(self, plg: type[TCommand], default: Literal[True]) -> TCommand:
         ...
 
-    def get_plugin(self, plg: type[TPlugin], default: bool = False) -> TPlugin | None:
+    def get_command(self, plg: type[TCommand], default: bool = False) -> TCommand | None:
         return next(
-            filter(lambda x: isinstance(x, plg), self.plugins.values()),
+            filter(lambda x: isinstance(x, plg), self.commands.values()),
             self.add(plg)[0] if default else None,
         )
 
     def query(self, *tag: str):
         yield from filter(
-            lambda x: set(x.metadata.tags).issuperset(tag), self.plugins.values()
+            lambda x: set(x.metadata.tags).issuperset(tag), self.commands.values()
         )
 
     @property
     def help(self):
-        return self.helper(self)
+        return self.helper.help()
 
     def main(self, args: list[str] | None = None):
         if self.load_preset:
@@ -228,8 +222,7 @@ class CommandLine:
         if args and args[0] == self.prefix:
             args.pop(0)
         if not args:
-            print(self.help)
-            return
+            return self.output_action(self.help)
         text = " ".join(args)
         with self.using():
             for alc in command_manager.get_commands(namespace=self.prefix):
@@ -254,10 +247,10 @@ class CommandLine:
                 if not may_output_text and _res.matched:
                     break
                 if may_output_text:
-                    print(may_output_text)
+                    self.output_action(may_output_text)
                     break
             else:
-                print(self.help)
+                return self.output_action(self.help)
 
 
 __all__ = ["CommandMetadata", "BaseCommand", "CommandLine", "register"]

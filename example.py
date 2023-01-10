@@ -18,4 +18,4 @@ if __name__ == '__main__':
     cli = CommandLine("test", "My first CLI", "0.0.1")
     cli.add(MyCommand)
     cli.load_register('builtin.cache')
-    cli.main(["test", "hello"])
+    cli.main(["test"])

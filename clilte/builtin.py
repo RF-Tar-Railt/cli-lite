@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from pprint import pprint
 from pathlib import Path
 from typing import Any
 from arclet.alconna import Alconna, Arparma, CommandMeta, Option
@@ -10,7 +11,7 @@ from .main import register, BaseCommand, CommandMetadata, CommandLine
 
 @register("*")
 class Help(BaseCommand, option=True):
-    def init_plugin(self) -> Alconna:
+    def init(self) -> Alconna:
         return Alconna(["--help", "-h"], meta=CommandMeta("show this help message and exit"))
 
     def dispatch(self, result: Arparma):
@@ -23,7 +24,7 @@ class Help(BaseCommand, option=True):
 
 @register("*")
 class Version(BaseCommand, option=True):
-    def init_plugin(self) -> Alconna:
+    def init(self) -> Alconna:
         return Alconna(["--version", "-v"], meta=CommandMeta("show the version and exit"))
 
     def dispatch(self, result: Arparma):
@@ -38,13 +39,12 @@ class Cache(BaseCommand):
     path: Path
     data: dict[str, Any]
 
-    def init_plugin(self) -> Alconna:
+    def init(self) -> Alconna:
         self.path = Path(f'.{CommandLine.current().prefix}.json')
+        self.data = {}
         if self.path.exists():
             with self.path.open('r+', encoding='UTF-8') as f_obj:
-                self.data = json.load(f_obj)
-        else:
-            self.data = {}
+                self.data.update(json.load(f_obj))
         return Alconna(
             "cache",
             Option("clear", help_text="清理缓存"),
@@ -56,7 +56,7 @@ class Cache(BaseCommand):
         if result.find("show"):
             print('---------------------------------')
             print(f'in "{os.getcwd()}{os.sep}{self.path.name}":')
-            return print(self.data)
+            return pprint(self.data)
         if result.find("clear"):
             self.data.clear()
             if self.path.exists():

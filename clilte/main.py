@@ -121,20 +121,17 @@ class Helper:
     def opt_line(self, name, desc, max_len: int = 0):
         return f"  {name:<{max_len}}    {desc}"
 
-    def help(self):
+    def lines(self, cmd_title: str = "Commands", opt_title: str = "Options"):
         cmds, opts, = list(self.cmds()), list(self.opts())
         cmd_desc, opt_desc = list(self.cmd_descriptions()), list(self.opts_descriptions())
         max_len = max(max(map(len, cmds or [''])), max(map(len, opts or [''])))
         cmd_string = "\n".join(self.cmd_line(i, j, max_len) for i, j in zip(cmds, cmd_desc))
         opt_string = "\n".join(self.opt_line(i, j, max_len) for i, j in zip(opts, opt_desc))
-        return (
-            f"{self.cli.name}\n"
-            f"\n"
-            f"Commands:\n{cmd_string}\n"
-            f"Options:\n{opt_string}\n"
-            f"\n"
-            f"Use '{self.cli.prefix} <command> --help' for more information about a command."
-        )
+        return f"{cmd_title}:\n{cmd_string}\n{opt_title}:\n{opt_string}"
+
+    def help(self):
+        footer = f"Use '{self.cli.prefix} <command> --help' for more information about a command."
+        return f"{self.cli.name}\n\n{self.lines()}\n\n{footer}"
 
 
 @dataclass(repr=True)
@@ -253,4 +250,4 @@ class CommandLine:
                 return self.output_action(self.help)
 
 
-__all__ = ["CommandMetadata", "BaseCommand", "CommandLine", "register"]
+__all__ = ["CommandMetadata", "BaseCommand", "CommandLine", "register", "Helper"]

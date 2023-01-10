@@ -4,7 +4,7 @@ from arclet.alconna import Alconna, Arparma, Args, CommandMeta
 
 class MyCommand(BaseCommand):
 
-    def init_plugin(self) -> Alconna:
+    def init(self) -> Alconna:
         return Alconna("hello", Args["name", str], meta=CommandMeta("test command"))
 
     def dispatch(self, result: Arparma):

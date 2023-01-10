@@ -1,2 +1,2 @@
-from .main import CommandMetadata, BaseCommand, CommandLine
-from .builtin import Help, Version
+from .main import CommandMetadata, BaseCommand, CommandLine, Helper
+from .builtin import Help, Version, Cache

@@ -19,7 +19,7 @@ from arclet.alconna import Alconna, Arparma, Args
 
 class MyCommand(BaseCommand):
 
-    def init_plugin(self) -> Alconna:
+    def init(self) -> Alconna:
         return Alconna("hello", Args["name", str])
 
     def dispatch(self, result: Arparma):

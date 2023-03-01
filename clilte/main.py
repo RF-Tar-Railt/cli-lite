@@ -223,20 +223,13 @@ class CommandLine:
         text = " ".join(args)
         with self.using():
             for alc in command_manager.get_commands(namespace=self.prefix):
-                may_output_text = None
-
-                def _h(string):
-                    nonlocal may_output_text
-                    may_output_text = string
-
-                output_manager.set_action(_h, alc.name)
-                try:
-                    _res = alc.parse(text)
-                except Exception as e:
-                    _res = Arparma(alc.path, text)
-                    _res.head_matched = False
-                    _res.matched = False
-                    _res.error_info = repr(e)
+                with output_manager.capture(alc.name) as cap:
+                    output_manager.set_action(lambda x: x, alc.name)
+                    try:
+                        _res = alc.parse(message)  # type: ignore
+                    except Exception as e:
+                        _res = Arparma(alc.path, text, False, error_info=repr(e))
+                    may_output_text: str | None = cap.get("output", None)
                 if not may_output_text and not _res.matched and not _res.head_matched:
                     continue
                 if not may_output_text and _res.error_info:

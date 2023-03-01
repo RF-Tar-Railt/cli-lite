@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field, InitVar
 from importlib.metadata import entry_points
-from typing import Any, Callable, TypeVar, overload, Literal
+from typing import Callable, TypeVar, overload, Literal
 
 from arclet.alconna import (
     Alconna,
@@ -30,14 +30,8 @@ class CommandMetadata:
     author: list[str] = field(default_factory=list)
 
 
-def _generate_behavior(func: Callable[[Arparma], Any]) -> ArparmaBehavior:
-    class _(ArparmaBehavior):
-        operate = staticmethod(func)
-
-    return _()
-
-
-class BaseCommand(metaclass=ABCMeta):
+@dataclass
+class BaseCommand(ArparmaBehavior, metaclass=ABCMeta):
     _option = False
 
     def __init__(self):
@@ -46,7 +40,8 @@ class BaseCommand(metaclass=ABCMeta):
         self.command.reset_namespace(
             cli_instance.get().prefix, not self.__class__._option
         )
-        self.command.behaviors.append(_generate_behavior(self.dispatch))
+
+        self.command.behaviors.append(self)
         if (
             not self.command.meta.description
             or self.command.meta.description == "Unknown"
@@ -77,6 +72,9 @@ class BaseCommand(metaclass=ABCMeta):
         """
         提供描述信息的方法
         """
+
+    def operate(self, interface: Arparma):
+        return self.dispatch(interface)
 
 
 _storage: dict[str, list[type[BaseCommand]]] = {}

@@ -6,41 +6,38 @@ from pprint import pprint
 from pathlib import Path
 from typing import Any
 from arclet.alconna import Alconna, Arparma, CommandMeta, Option
-from .main import register, BaseCommand, CommandMetadata, CommandLine
+from .core import register, BasePlugin, PluginMetadata, CommandLine
 
 
 @register("*")
-class Help(BaseCommand, option=True):
-    def init(self) -> Alconna:
-        return Alconna(["--help", "-h"], meta=CommandMeta("show this help message and exit"))
+class Version(BasePlugin):
+    def init(self) -> Alconna | str:
+        return "version"
+
+    def supply_options(self) -> list[Option] | None:
+        return [
+            Option("--version|-V", help_text="show the version and exit")
+        ]
 
     def dispatch(self, result: Arparma):
-        print(CommandLine.current().help)
+        if result.find("version"):
+            print(CommandLine.current().version)
+            return False
         return True
 
-    def meta(self) -> CommandMetadata:
-        return CommandMetadata("help", "0.1.0", "help", ["help"], ["RF-Tar-Railt"])
-
-
-@register("*")
-class Version(BaseCommand, option=True):
-    def init(self) -> Alconna:
-        return Alconna(["--version", "-v"], meta=CommandMeta("show the version and exit"))
-
-    def dispatch(self, result: Arparma):
-        print('.'.join(map(str, CommandLine.current().version)))
-
-    def meta(self) -> CommandMetadata:
-        return CommandMetadata("version", "0.1.0", "version", ["version"], ["RF-Tar-Railt"])
+    def meta(self) -> PluginMetadata:
+        return PluginMetadata(
+            "version", "0.1.0", "version", ["version"], ["RF-Tar-Railt"], 0
+        )
 
 
 @register("builtin.cache")
-class Cache(BaseCommand):
+class Cache(BasePlugin):
     path: Path
     data: dict[str, Any]
 
     def init(self) -> Alconna:
-        self.path = Path(f'.{CommandLine.current().prefix}.json')
+        self.path = Path(f'.{CommandLine.current().name}.json')
         self.data = {}
         if self.path.exists():
             with self.path.open('r+', encoding='UTF-8') as f_obj:
@@ -56,18 +53,22 @@ class Cache(BaseCommand):
         if result.find("show"):
             print('---------------------------------')
             print(f'in "{os.getcwd()}{os.sep}{self.path.name}":')
-            return pprint(self.data)
+            pprint(self.data)
+            return
         if result.find("clear"):
             self.data.clear()
             if self.path.exists():
                 print('---------------------------------')
                 print(f"removed {os.getcwd()}{os.sep}{self.path.name}.")
-                return self.path.unlink(True)
-            return print("cache cleared")
-        return print(self.command.get_help())
+                self.path.unlink(True)
+                return
+            print("cache cleared")
+            return
+        print(self.command.get_help())
+        return
 
-    def meta(self) -> CommandMetadata:
-        return CommandMetadata("cache", "0.1.0", "管理缓存", ["cache", "dev"], ["RF-Tar-Railt"])
+    def meta(self) -> PluginMetadata:
+        return PluginMetadata("cache", "0.1.0", "管理缓存", ["cache", "dev"], ["RF-Tar-Railt"])
 
     def save(self):
         with self.path.open('w+', encoding='UTF-8') as f_obj:

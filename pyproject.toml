@@ -1,13 +1,13 @@
 [project]
 name = "cli-lite"
-version = "0.6.0"
+version = "0.7.0"
 description = "A simple framework to build a cli tool, base on Alconna"
 authors = [
     {name = "RF-Tar-Railt",email = "rf_tar_railt@qq.com"}
 ]
 dependencies = [
-    "arclet-alconna<1.7.0, >=1.6.5",
-    "arclet-alconna-tools>=0.5.0",
+    "arclet-alconna<2.0.0, >=1.7.1",
+    "arclet-alconna-tools>=0.6.0",
 ]
 requires-python = ">=3.8"
 readme = "README.md"

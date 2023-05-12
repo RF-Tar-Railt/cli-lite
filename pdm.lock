@@ -3,7 +3,7 @@
 
 [[package]]
 name = "arclet-alconna"
-version = "1.7.0"
+version = "1.7.1"
 requires_python = ">=3.8"
 summary = "A High-performance, Generality, Humane Command Line Arguments Parser Library."
 dependencies = [
@@ -72,12 +72,12 @@ summary = "Backported and Experimental Type Hints for Python 3.7+"
 [metadata]
 lock_version = "4.2"
 groups = ["default", "dev"]
-content_hash = "sha256:22ed3773d7c27bc3d0e9f2843ceca6bd0fb8a32ef90e029d257d29838a1a304a"
+content_hash = "sha256:c2c1819023be8a959caa3255c152590f91ffa1840ad21576652b0f2db5f00bae"
 
 [metadata.files]
-"arclet-alconna 1.7.0" = [
-    {url = "https://files.pythonhosted.org/packages/5b/ba/e7d93fb0feb76ea3f2741023ba6b190204e2f73ea36fed16b27154c6f3d3/arclet_alconna-1.7.0-py3-none-any.whl", hash = "sha256:96c807ef6950daa2f94f53ed2207382b83d26b6417ba5459f901a04665c32298"},
-    {url = "https://files.pythonhosted.org/packages/a6/61/6dc441cdaaf457c660e8fb3b4b6694c316502ba6771853645ddb81438472/arclet-alconna-1.7.0.tar.gz", hash = "sha256:ad0534867a16b745fa528503d269179a0b3a1b63372a45e4f70435921e952717"},
+"arclet-alconna 1.7.1" = [
+    {url = "https://files.pythonhosted.org/packages/2e/5b/6d8c35c244e9f1c2ef9292f550f282ab68e3c1d01ae707c7910b847694c8/arclet-alconna-1.7.1.tar.gz", hash = "sha256:3b2e469f1df33d504b339f5d102d0c6b4167c6a37a5204f974adb03e4d4b0428"},
+    {url = "https://files.pythonhosted.org/packages/91/4b/8cd241fd9dd783230ed2d11d9d49618af59974c2a8429f32bc1ef3619eab/arclet_alconna-1.7.1-py3-none-any.whl", hash = "sha256:3fa641e3eacdb0a603a6ffb47cb3051cca7f90f5919767f3265d7e817d111cec"},
 ]
 "arclet-alconna-tools 0.6.0" = [
     {url = "https://files.pythonhosted.org/packages/b0/ed/ad6307e2fc0d136f84764cdb490a3fd6148f0221d4465308ea0db6338d23/arclet_alconna_tools-0.6.0-py3-none-any.whl", hash = "sha256:bedbe7c35d41d0e9daba37cf5fbff01e8ac16625a6d48566aacd9f64a07eb5dc"},

@@ -24,6 +24,14 @@ from arclet.alconna.tools import ShellTextFormatter, RichConsoleFormatter
 cli_instance: ContextVar[CommandLine] = ContextVar("litecli")
 
 
+def handle_argv():
+    path = Path(sys.argv[0])
+    head = path.stem
+    if head == "__main__":
+        head = path.parent.stem
+    return head
+
+
 @dataclass
 class PluginMetadata:
     name: str
@@ -211,8 +219,7 @@ class CommandLine:
         if args:
             res = self._command.parse(list(args))  # type: ignore
         else:
-            path = Path(sys.argv[0])
-            head = path.parent.stem if str(path.parent) not in (".", "/", "\\") else path.stem
+            head = handle_argv()
             if head != self._command.command:
                 res = self._command.parse(sys.argv[1:])  # type: ignore
             else:

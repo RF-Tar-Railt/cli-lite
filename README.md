@@ -1,6 +1,6 @@
 # Cli-Lite
 
-A simple framework to build a cli tool. Base on [`Alconna`](https://github/ArcletProject/Alconna)
+A simple framework to build a cli tool. Base on [`Alconna`](https://github.com/ArcletProject/Alconna)
 
 ## install
 

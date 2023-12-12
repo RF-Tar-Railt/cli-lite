@@ -50,12 +50,12 @@ class Cache(BasePlugin):
         )
 
     def dispatch(self, result: Arparma):
-        if result.find("show"):
+        if result.find("cache.show"):
             print('---------------------------------')
             print(f'in "{os.getcwd()}{os.sep}{self.path.name}":')
             pprint(self.data)
             return
-        if result.find("clear"):
+        if result.find("cache.clear"):
             self.data.clear()
             if self.path.exists():
                 print('---------------------------------')
@@ -64,7 +64,8 @@ class Cache(BasePlugin):
                 return
             print("cache cleared")
             return
-        print(self.command.get_help())
+        if result.find("cache"):
+            print(self.command.get_help())
         return
 
     def meta(self) -> PluginMetadata:

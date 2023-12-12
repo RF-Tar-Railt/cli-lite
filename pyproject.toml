@@ -1,13 +1,13 @@
 [project]
 name = "cli-lite"
-version = "0.7.1"
+version = "0.8.0"
 description = "A simple framework to build a cli tool, base on Alconna"
 authors = [
     {name = "RF-Tar-Railt",email = "rf_tar_railt@qq.com"}
 ]
 dependencies = [
-    "arclet-alconna<2.0.0, >=1.7.2",
-    "arclet-alconna-tools>=0.6.0",
+    "arclet-alconna>=1.7.39",
+    "arclet-alconna-tools>=0.6.10",
 ]
 requires-python = ">=3.8"
 readme = "README.md"
@@ -26,8 +26,6 @@ classifiers = [
 Homepage = "https://github.com/RF-Tar-Railt/cli-lite"
 "Bug Reports" = "https://github.com/RF-Tar-Railt/cli-lite/issues"
 Source = "https://github.com/RF-Tar-Railt/cli-lite"
-
-[project.optional-dependencies]
 
 [tool.pdm]
 

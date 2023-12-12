@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from clilte import BasePlugin, CommandLine, PluginMetadata
+from clilte import BasePlugin, PluginMetadata
 from arclet.alconna import Alconna, Arparma, Args, CommandMeta
 
 
-class MyPlugin(BasePlugin):
+class MyPlugin1(BasePlugin):
 
     def init(self) -> Alconna | str:
         return Alconna(
-            "hello",
+            self.local,
             Args["name", str],
             meta=CommandMeta("test command")
         )
@@ -19,11 +19,3 @@ class MyPlugin(BasePlugin):
     def dispatch(self, result: Arparma) -> bool | None:
         print(f"Hello! {result.name}")
         return True
-
-
-if __name__ == '__main__':
-    cli = CommandLine(title="My first CLI", version="example 0.0.1", rich=True)
-    cli.add(MyPlugin)
-    cli.load_plugins("examples")
-    cli.load_register('builtin.cache')
-    cli.main()

@@ -1,27 +1,33 @@
 from __future__ import annotations
 
+import functools
+import importlib
+import inspect
+import re
 import sys
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass, field, InitVar
+from dataclasses import InitVar, dataclass, field
 from importlib.metadata import entry_points
 from pathlib import Path
-from typing import Callable, TypeVar, overload, Literal
+from typing import Callable, Literal, TypeVar, overload
 
 from arclet.alconna import (
     Alconna,
-    Arparma,
     Args,
-    Option,
+    Arparma,
     CommandMeta,
+    Option,
     command_manager,
-    namespace
+    namespace,
 )
 from arclet.alconna.exceptions import SpecialOptionTriggered
-from arclet.alconna.tools import ShellTextFormatter, RichConsoleFormatter
+from arclet.alconna.tools import RichConsoleFormatter, ShellTextFormatter
 
 cli_instance: ContextVar[CommandLine] = ContextVar("litecli")
+
+pattern = re.compile(r"(?P<module>[\w.]+)\s*" r"(:\s*(?P<attr>[\w.]+))?\s*$")
 
 
 def handle_argv():
@@ -43,7 +49,6 @@ class PluginMetadata:
 
 
 class BasePlugin(metaclass=ABCMeta):
-
     def __init__(self):
         self.metadata: PluginMetadata = self.meta()
         self.command: Alconna | str = self.init()
@@ -54,7 +59,7 @@ class BasePlugin(metaclass=ABCMeta):
                 or self.command.meta.description == "Unknown"
             ):
                 self.command.meta = (
-                        self.metadata.description or self.metadata.name or "Unknown"
+                    self.metadata.description or self.metadata.name or "Unknown"
                 )
             command_manager.delete(self.command)
             ns = cli_instance.get()._command.namespace_config
@@ -63,12 +68,24 @@ class BasePlugin(metaclass=ABCMeta):
             self.command.prefixes = []
             self.command.options = self.command.options[:-3]
 
-            self.command.meta.fuzzy_match = ns.fuzzy_match or self.command.meta.fuzzy_match
-            self.command.meta.raise_exception = ns.raise_exception or self.command.meta.raise_exception
+            self.command.meta.fuzzy_match = (
+                ns.fuzzy_match or self.command.meta.fuzzy_match
+            )
+            self.command.meta.raise_exception = (
+                ns.raise_exception or self.command.meta.raise_exception
+            )
             self.command._hash = self.command._calc_hash()
             command_manager.register(self.command)
         else:
             self.name: str = self.command
+
+    @property
+    def local(self):
+        """以插件所在的模块名作为子命令的名称"""
+        module = self.__module__.split(".")[-1]
+        if module == "__main__":
+            return handle_argv()
+        return module
 
     @abstractmethod
     def init(self) -> Alconna | str:
@@ -125,25 +142,33 @@ class CommandLine:
     fuzzy_match: InitVar[bool] = field(default=False)
     plugins: dict[str, BasePlugin] = field(default_factory=dict, init=False)
     _command: Alconna = field(init=False)
-    callback: Callable[[Arparma], None] = field(default_factory=lambda: (lambda x: None), init=False)
+    callback: Callable[[Arparma], None] = field(
+        default_factory=lambda: (lambda x: None), init=False
+    )
 
     def __post_init__(self, _name: str | None, fuzzy_match: bool):
         if _name is None:
             self._command = Alconna(
-                formatter_type=RichConsoleFormatter if self.rich else ShellTextFormatter,
-                meta=CommandMeta(fuzzy_match=fuzzy_match, description=self.title)
+                formatter_type=RichConsoleFormatter
+                if self.rich
+                else ShellTextFormatter,
+                meta=CommandMeta(fuzzy_match=fuzzy_match, description=self.title),
             )
         else:
             self._command = Alconna(
                 _name,
-                formatter_type=RichConsoleFormatter if self.rich else ShellTextFormatter,
+                formatter_type=RichConsoleFormatter
+                if self.rich
+                else ShellTextFormatter,
                 meta=CommandMeta(fuzzy_match=fuzzy_match, description=self.title),
             )
         with namespace(self.name) as np:
             np.headers = []
             np.separators = (" ",)
             np.fuzzy_match = fuzzy_match
-            np.formatter_type = RichConsoleFormatter if self.rich else ShellTextFormatter
+            np.formatter_type = (
+                RichConsoleFormatter if self.rich else ShellTextFormatter
+            )
 
     @property
     def name(self):
@@ -192,6 +217,46 @@ class CommandLine:
     def load_entry(self):
         for entry in entry_points().get(f"litecli.{self.name}.plugins", []):
             self.add(entry.load())
+
+    def load_plugin(self, name: str | Path):
+        if isinstance(name, Path):
+            module = importlib.import_module(".".join(name.parts[:-1] + (name.stem,)))
+            for _, plug in inspect.getmembers(
+                module, lambda x: isinstance(x, type) and issubclass(x, BasePlugin)
+            ):
+                if plug is BasePlugin:
+                    continue
+                self.add(plug)
+            return
+        match = pattern.match(name)
+        module = importlib.import_module(match.group("module"))
+        if not match.group("attr"):
+            for _, plug in inspect.getmembers(
+                module, lambda x: isinstance(x, type) and issubclass(x, BasePlugin)
+            ):
+                if plug is BasePlugin:
+                    continue
+                self.add(plug)
+            return
+        attrs = filter(None, (match.group("attr") or "").split("."))
+        plug = functools.reduce(getattr, attrs, module)
+        if not issubclass(plug, BasePlugin):
+            raise TypeError(f"target {plug} is not a plugin")
+        self.add(plug)
+
+    def load_plugins(self, dirname: str | Path):
+        dir_path = Path(dirname)
+        if not dir_path.exists():
+            raise FileNotFoundError(f"directory {dirname} not exists")
+        if not dir_path.is_dir():
+            raise NotADirectoryError(f"target {dirname} is not a directory")
+        for path in dir_path.iterdir():
+            if path.name.startswith("_"):
+                continue
+            if path.suffix == ".py":
+                self.load_plugin(path)
+            elif path.is_dir():
+                self.load_plugins(path)
 
     @overload
     def get_plugin(self, plg: type[TPlugin], default: Literal[True]) -> TPlugin:

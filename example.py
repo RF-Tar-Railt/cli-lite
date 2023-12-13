@@ -22,7 +22,7 @@ class MyPlugin(BasePlugin):
 
 
 if __name__ == '__main__':
-    cli = CommandLine(title="My first CLI", version="example 0.0.1", rich=True)
+    cli = CommandLine(title="My first CLI", version="example 0.0.1", rich=True, fuzzy_match=True)
     cli.add(MyPlugin)
     cli.load_plugins("examples")
     cli.load_register('builtin.cache')

@@ -58,9 +58,7 @@ class BasePlugin(metaclass=ABCMeta):
                 not self.command.meta.description
                 or self.command.meta.description == "Unknown"
             ):
-                self.command.meta = (
-                    self.metadata.description or self.metadata.name or "Unknown"
-                )
+                self.command.meta.description = self.metadata.name or "Unknown"
             command_manager.delete(self.command)
             ns = cli_instance.get()._command.namespace_config
             self.command.namespace = ns.name

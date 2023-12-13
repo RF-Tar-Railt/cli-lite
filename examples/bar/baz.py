@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from clilte import BasePlugin, PluginMetadata
-from arclet.alconna import Alconna, Arparma, Args, CommandMeta
+from arclet.alconna import Alconna, Arparma, Args
 
 
 class MyPlugin2(BasePlugin):
@@ -10,7 +10,6 @@ class MyPlugin2(BasePlugin):
         return Alconna(
             self.local,
             Args["name/", str],
-            meta=CommandMeta("test command")
         )
 
     def meta(self) -> PluginMetadata:

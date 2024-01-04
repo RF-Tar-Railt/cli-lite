@@ -233,6 +233,8 @@ class CommandLine:
                 self.add(plug)
             return
         match = pattern.match(name)
+        if not match:
+            raise ModuleNotFoundError(name)
         module = importlib.import_module(match.group("module"))
         if not match.group("attr"):
             for _, plug in inspect.getmembers(
@@ -263,6 +265,10 @@ class CommandLine:
                 self.load_plugins(path)
 
     @overload
+    def get_plugin(self, plg: type[TPlugin]) -> TPlugin | None:
+        ...
+
+    @overload
     def get_plugin(self, plg: type[TPlugin], default: Literal[True]) -> TPlugin:
         ...
 
@@ -289,10 +295,11 @@ class CommandLine:
             res = self._command.parse(list(args))  # type: ignore
         else:
             head = handle_argv()
+            argv = [(f"\"{arg}\"" if any(arg.count(sep) for sep in self._command.separators) else arg) for arg in sys.argv[1:]]
             if head != self._command.command:
-                res = self._command.parse(sys.argv[1:])  # type: ignore
+                res = self._command.parse(argv)  # type: ignore
             else:
-                res = self._command.parse([head, *sys.argv[1:]])  # type: ignore
+                res = self._command.parse([head, *argv])  # type: ignore
         if not res.matched:
             if isinstance(res.error_info, SpecialOptionTriggered):
                 return

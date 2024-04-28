@@ -1,13 +1,13 @@
 [project]
 name = "cli-lite"
-version = "0.8.3"
+version = "0.9.0"
 description = "A simple framework to build a cli tool, base on Alconna"
 authors = [
     {name = "RF-Tar-Railt",email = "rf_tar_railt@qq.com"}
 ]
 dependencies = [
-    "arclet-alconna>=1.7.39",
-    "arclet-alconna-tools>=0.6.10",
+    "arclet-alconna>=1.8.11",
+    "arclet-alconna-tools>=0.7.3",
 ]
 requires-python = ">=3.8"
 readme = "README.md"
@@ -37,5 +37,5 @@ dev = [
     "fix-future-annotations>=0.5.0",
 ]
 [build-system]
-requires = ["pdm-pep517>=1.0.0"]
-build-backend = "pdm.pep517.api"
+requires = ["pdm-backend"]
+build-backend = "pdm-backend"

@@ -51,9 +51,10 @@ class PluginMetadata:
 class BasePlugin(metaclass=ABCMeta):
     def __init__(self):
         self.metadata: PluginMetadata = self.meta()
-        self.command: Alconna | str = self.init()
-        if isinstance(self.command, Alconna):
-            self.name: str = self.command.name
+        command = self.init()
+        if isinstance(command, Alconna):
+            self.name: str = command.name
+            self.command: Alconna = command
             if (
                 not self.command.meta.description
                 or self.command.meta.description == "Unknown"
@@ -81,7 +82,7 @@ class BasePlugin(metaclass=ABCMeta):
             self.command._hash = self.command._calc_hash()
             command_manager.register(self.command)
         else:
-            self.name: str = self.command
+            self.name: str = command
 
     @property
     def local(self):
@@ -201,7 +202,7 @@ class CommandLine:
             res: list[TPlugin] = [cls() for cls in command]
         for plg in res:
             self.plugins[plg.name] = plg
-            if isinstance(plg.command, Alconna):
+            if hasattr(plg, "command") and isinstance(plg.command, Alconna):
                 self._command.add(plg.command)
             if _opts := plg.supply_options():
                 for _opt in _opts:
@@ -230,7 +231,7 @@ class CommandLine:
             ):
                 if plug is BasePlugin:
                     continue
-                self.add(plug)
+                self.add(plug)  # type: ignore
             return
         match = pattern.match(name)
         if not match:
@@ -242,11 +243,11 @@ class CommandLine:
             ):
                 if plug is BasePlugin:
                     continue
-                self.add(plug)
+                self.add(plug)  # type: ignore
             return
         attrs = filter(None, (match.group("attr") or "").split("."))
         plug = functools.reduce(getattr, attrs, module)
-        if not issubclass(plug, BasePlugin):
+        if not issubclass(plug, BasePlugin):  # type: ignore
             raise TypeError(f"target {plug} is not a plugin")
         self.add(plug)
 
@@ -274,7 +275,7 @@ class CommandLine:
 
     def get_plugin(self, plg: type[TPlugin], default: bool = False) -> TPlugin | None:
         return next(
-            filter(lambda x: isinstance(x, plg), self.plugins.values()),
+            (x for x in self.plugins.values() if isinstance(x, plg)),
             self.add(plg)[0] if default else None,
         )
 

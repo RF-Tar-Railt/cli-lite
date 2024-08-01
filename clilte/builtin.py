@@ -14,7 +14,8 @@ class Version(BasePlugin):
     def init(self) -> Alconna | str:
         return "version"
 
-    def supply_options(self) -> list[Option] | None:
+    @classmethod
+    def supply_options(cls) -> list[Option] | None:
         return [
             Option("--version|-V", help_text="show the version and exit")
         ]
@@ -66,7 +67,8 @@ class Cache(BasePlugin):
             return
         if result.find("cache"):
             print(self.command.get_help())
-        return
+            return
+        return True
 
     def meta(self) -> PluginMetadata:
         return PluginMetadata("cache", "0.1.0", "管理缓存", ["cache", "dev"], ["RF-Tar-Railt"])
@@ -74,3 +76,7 @@ class Cache(BasePlugin):
     def save(self):
         with self.path.open('w+', encoding='UTF-8') as f_obj:
             json.dump(self.data, f_obj, ensure_ascii=False, indent=4)
+
+    @classmethod
+    def supply_options(cls) -> list[Option] | None:
+        return

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from clilte import BasePlugin, CommandLine, PluginMetadata
-from arclet.alconna import Alconna, Arparma, Args, CommandMeta
+from arclet.alconna import Alconna, Arparma, Args, CommandMeta, Option
 
 
 class MyPlugin(BasePlugin):
@@ -19,6 +19,10 @@ class MyPlugin(BasePlugin):
     def dispatch(self, result: Arparma) -> bool | None:
         print(f"Hello! {result.name}")
         return True
+
+    @classmethod
+    def supply_options(cls) -> list[Option] | None:
+        return
 
 
 if __name__ == '__main__':

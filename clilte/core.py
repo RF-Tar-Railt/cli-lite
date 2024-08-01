@@ -9,9 +9,9 @@ from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import InitVar, dataclass, field
-from importlib.metadata import entry_points
+from importlib_metadata import entry_points
 from pathlib import Path
-from typing import Callable, Literal, TypeVar, overload
+from typing import Callable, TypeVar
 
 from arclet.alconna import (
     Alconna,
@@ -23,7 +23,8 @@ from arclet.alconna import (
     namespace,
 )
 from arclet.alconna.exceptions import SpecialOptionTriggered
-from arclet.alconna.tools import RichConsoleFormatter, ShellTextFormatter
+
+from .formatter import RichConsoleFormatter, ShellTextFormatter
 
 cli_instance: ContextVar[CommandLine] = ContextVar("litecli")
 
@@ -118,11 +119,12 @@ class BasePlugin(metaclass=ABCMeta):
         若返回 False, 则表示命令执行结束
         """
 
-    def supply_options(self) -> list[Option] | None:
+    @classmethod
+    @abstractmethod
+    def supply_options(cls) -> list[Option] | None:
         """
         为主命令提供额外的选项
         """
-        return
 
 
 _storage: dict[str, list[type[BasePlugin]]] = {}
@@ -145,35 +147,33 @@ class CommandLine:
     load_preset: bool = field(default=True)
     rich: bool = field(default=False)
     fuzzy_match: InitVar[bool] = field(default=False)
-    plugins: dict[str, BasePlugin] = field(default_factory=dict, init=False)
+    plugins: dict[type[BasePlugin], BasePlugin] = field(default_factory=dict, init=False)
     _command: Alconna = field(init=False)
     callback: Callable[[Arparma], None] = field(
         default_factory=lambda: (lambda x: None), init=False
     )
+    formatter_type: type[ShellTextFormatter | RichConsoleFormatter] = field(init=False)
 
     def __post_init__(self, _name: str | None, fuzzy_match: bool):
+        self.formatter_type = RichConsoleFormatter if self.rich else ShellTextFormatter
         if _name is None:
             self._command = Alconna(
-                formatter_type=RichConsoleFormatter
-                if self.rich
-                else ShellTextFormatter,
+                formatter_type=self.formatter_type ,
                 meta=CommandMeta(fuzzy_match=fuzzy_match, description=self.title),
             )
         else:
             self._command = Alconna(
                 _name,
-                formatter_type=RichConsoleFormatter
-                if self.rich
-                else ShellTextFormatter,
+                formatter_type=self.formatter_type ,
                 meta=CommandMeta(fuzzy_match=fuzzy_match, description=self.title),
             )
+        self.formatter_type.global_options.append(self._command.options[0])  # type: ignore
+        self.formatter_type.main_name = self._command.header_display
         with namespace(self.name) as np:
             np.headers = []
             np.separators = (" ",)
             np.fuzzy_match = fuzzy_match
-            np.formatter_type = (
-                RichConsoleFormatter if self.rich else ShellTextFormatter
-            )
+            np.formatter_type = self.formatter_type
 
     @property
     def name(self):
@@ -198,16 +198,23 @@ class CommandLine:
         self.callback = callback
 
     def add(self, *command: type[TPlugin]):
-        with self.using():
-            res: list[TPlugin] = [cls() for cls in command]
-        for plg in res:
-            self.plugins[plg.name] = plg
-            if hasattr(plg, "command") and isinstance(plg.command, Alconna):
-                self._command.add(plg.command)
+        for cls in command:
+            if cls in self.plugins:
+                continue
+            self.plugins[cls] = cls  # type: ignore
+
+    def load_all(self):
+        for plg in self.plugins:
             if _opts := plg.supply_options():
+                self.formatter_type.global_options.extend(_opts)
                 for _opt in _opts:
                     self._command.add(_opt)
-        return res
+        with self.using():
+            plgs: list[BasePlugin] = [cls() for cls in self.plugins]
+            for plg in plgs:
+                self.plugins[plg.__class__] = plg
+                if hasattr(plg, "command") and isinstance(plg.command, Alconna):
+                    self._command.add(plg.command)
 
     def preset(self):
         for cls in _storage.get(self._command.command, []) + _storage.get("*", []):
@@ -220,7 +227,7 @@ class CommandLine:
             self.add(cls)
 
     def load_entry(self):
-        for entry in entry_points().get(f"litecli.{self.name}.plugins", []):
+        for entry in entry_points().select(group=f"litecli.{self.name}.plugins"):
             self.add(entry.load())
 
     def load_plugin(self, name: str | Path):
@@ -265,18 +272,10 @@ class CommandLine:
             elif path.is_dir():
                 self.load_plugins(path)
 
-    @overload
     def get_plugin(self, plg: type[TPlugin]) -> TPlugin | None:
-        ...
-
-    @overload
-    def get_plugin(self, plg: type[TPlugin], default: Literal[True]) -> TPlugin:
-        ...
-
-    def get_plugin(self, plg: type[TPlugin], default: bool = False) -> TPlugin | None:
         return next(
             (x for x in self.plugins.values() if isinstance(x, plg)),
-            self.add(plg)[0] if default else None,
+            None,
         )
 
     def query(self, *tag: str):
@@ -292,6 +291,7 @@ class CommandLine:
         if self.load_preset:
             self.preset()
         self.load_entry()
+        self.load_all()
         if args:
             res = self._command.parse(list(args))  # type: ignore
         else:

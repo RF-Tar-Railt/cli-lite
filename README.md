@@ -4,7 +4,7 @@ A simple framework to build a cli tool. Base on [`Alconna`](https://github.com/A
 
 ## install
 
-```powershell
+```shell
 pip install cli-lite
 ```
 
@@ -15,7 +15,7 @@ write as sample:
 ```python
 # example.py
 from clilte import BasePlugin, CommandLine, PluginMetadata
-from arclet.alconna import Alconna, Arparma, Args, CommandMeta
+from arclet.alconna import Alconna, Arparma, Args, CommandMeta, Option
 
 
 class MyPlugin(BasePlugin):
@@ -29,11 +29,14 @@ class MyPlugin(BasePlugin):
     def dispatch(self, result: Arparma) -> bool | None:
         return print(f"Hello! {result.name}")
 
+    @classmethod
+    def supply_options(cls) -> list[Option] | None:
+        return 
+
 
 if __name__ == '__main__':
     cli = CommandLine(title="My first CLI", version="example 0.0.1")
     cli.add(MyPlugin)
-    cli.load_register('builtin.cache')
     cli.main()
 ```
 

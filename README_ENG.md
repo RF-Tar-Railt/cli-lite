@@ -1,19 +1,16 @@
 # Cli-Lite
 
-一个简单的框架，用于构建 CLI 工具。基于 [`Alconna`](https://github.com/ArcletProject/Alconna)
+A simple framework to build a cli tool. Base on [`Alconna`](https://github.com/ArcletProject/Alconna)
 
-[English Version](README_ENG.md)
-
-
-## 安装
+## install
 
 ```shell
 pip install cli-lite
 ```
 
-## 示例
+## example
 
-编写示例代码如下：
+write as sample:
 
 ```python
 # example.py
@@ -24,10 +21,10 @@ from arclet.alconna import Alconna, Arparma, Args, CommandMeta, Option
 class MyPlugin(BasePlugin):
 
     def init(self) -> Alconna | str:
-        return Alconna("hello", Args["name", str], meta=CommandMeta("测试命令"))
+        return Alconna("hello", Args["name", str], meta=CommandMeta("test command"))
 
     def meta(self) -> PluginMetadata:
-        return PluginMetadata("hello", "0.0.1", "我的第一个插件", ["dev"], ["john"])
+        return PluginMetadata("hello", "0.0.1", "my first plugin", ["dev"], ["john"])
 
     def dispatch(self, result: Arparma) -> bool | None:
         return print(f"Hello! {result.name}")
@@ -38,18 +35,18 @@ class MyPlugin(BasePlugin):
 
 
 if __name__ == '__main__':
-    cli = CommandLine(title="我的第一个 CLI", version="示例 0.0.1")
+    cli = CommandLine(title="My first CLI", version="example 0.0.1")
     cli.add(MyPlugin)
     cli.main()
 ```
 
-然后执行以下命令：
+and execute the line:
 
 ```shell
 python example.py hello world
 ```
 
-你将得到以下结果：
+you will get the result:
 
 ```shell
 Hello! world

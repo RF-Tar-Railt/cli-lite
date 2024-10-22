@@ -22,6 +22,7 @@ from arclet.alconna import (
     command_manager,
     namespace,
 )
+from arclet.alconna.base import Help, Shortcut, Completion
 from arclet.alconna.exceptions import SpecialOptionTriggered
 
 from .formatter import RichConsoleFormatter, ShellTextFormatter
@@ -72,7 +73,7 @@ class BasePlugin(metaclass=ABCMeta):
             self.command.namespace = ns.name
             self.command.path = f"{ns.name}::{self.command.name}"
             self.command.prefixes = []
-            self.command.options = self.command.options[:-3]
+            self.command.options = [opt for opt in self.command.options if not isinstance(opt, (Help, Shortcut, Completion))]
 
             self.command.meta.fuzzy_match = (
                 ns.fuzzy_match or self.command.meta.fuzzy_match

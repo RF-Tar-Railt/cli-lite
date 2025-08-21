@@ -25,4 +25,4 @@ if __name__ == '__main__':
     cli.add(MyPlugin)
     cli.load_plugins("examples")
     cli.load_register('builtin.cache')
-    cli.main("example", "hello", "123")
+    cli.main()

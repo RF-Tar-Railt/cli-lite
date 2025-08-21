@@ -6,7 +6,7 @@ from arclet.alconna import Alconna, Arparma, Args, CommandMeta, Option
 
 class MyPlugin(BasePlugin):
 
-    def init(self) -> Alconna | str:
+    def init(self) -> Alconna:
         return Alconna(
             "hello",
             Args["name", str],
@@ -16,13 +16,8 @@ class MyPlugin(BasePlugin):
     def meta(self) -> PluginMetadata:
         return PluginMetadata("hello", "0.0.1", "my first plugin", ["dev"], ["john"])
 
-    def dispatch(self, result: Arparma) -> bool | None:
-        print(f"Hello! {result.name}")
-        return True
-
-    @classmethod
-    def supply_options(cls) -> list[Option] | None:
-        return
+    def dispatch(self, result: Arparma, next_):
+        return next_(f"Hello! {result.name}")
 
 
 if __name__ == '__main__':
@@ -30,4 +25,4 @@ if __name__ == '__main__':
     cli.add(MyPlugin)
     cli.load_plugins("examples")
     cli.load_register('builtin.cache')
-    cli.main()
+    cli.main("example", "hello", "123")

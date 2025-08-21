@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from pprint import pprint
+from pprint import pformat
 from pathlib import Path
 from typing import Any
 from arclet.alconna import Alconna, Arparma, CommandMeta, Option, Subcommand
@@ -14,11 +14,10 @@ class Version(BasePlugin):
     def init(self):
         return Option("--version|-V", help_text="show the version and exit"), False
 
-    def dispatch(self, result: Arparma):
+    def dispatch(self, result: Arparma, next_):
         if result.find("version"):
-            print(CommandLine.current().version)
-            return False
-        return True
+            return CommandLine.current().version
+        return next_(None)
 
     def meta(self) -> PluginMetadata:
         return PluginMetadata(
@@ -44,25 +43,22 @@ class Cache(BasePlugin):
             meta=CommandMeta("管理缓存")
         )
 
-    def dispatch(self, result: Arparma):
+    def dispatch(self, result: Arparma, next_):
         if result.find("cache.show"):
-            print('---------------------------------')
-            print(f'in "{os.getcwd()}{os.sep}{self.path.name}":')
-            pprint(self.data)
-            return
+            return f"""\
+---------------------------------
+in "{os.getcwd()}{os.sep}{self.path.name}":
+{pformat(self.data)}
+"""
         if result.find("cache.clear"):
             self.data.clear()
             if self.path.exists():
-                print('---------------------------------')
-                print(f"removed {os.getcwd()}{os.sep}{self.path.name}.")
                 self.path.unlink(True)
-                return
-            print("cache cleared")
-            return
+                return f"---------------------------------\nremoved {os.getcwd()}{os.sep}{self.path.name}."
+            return "cache cleared"
         if result.find("cache"):
-            print(self.command.get_help())
-            return
-        return True
+            return self.command.get_help()
+        return next_(None)
 
     def meta(self) -> PluginMetadata:
         return PluginMetadata("cache", "0.1.0", "管理缓存", ["cache", "dev"], ["RF-Tar-Railt"])

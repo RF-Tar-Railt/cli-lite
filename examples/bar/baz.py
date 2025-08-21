@@ -15,6 +15,5 @@ class MyPlugin2(BasePlugin):
     def meta(self) -> PluginMetadata:
         return PluginMetadata("hello", "0.0.1", "my first plugin", ["dev"], ["john"])
 
-    def dispatch(self, result: Arparma) -> bool | None:
-        print(f"Hello! {result.name}")
-        return True
+    def dispatch(self, result: Arparma, next_):
+        return next_(f"Hello! {result.name}")

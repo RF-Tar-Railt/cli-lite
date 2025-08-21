@@ -11,7 +11,7 @@ from contextvars import ContextVar
 from dataclasses import InitVar, dataclass, field
 from importlib_metadata import entry_points
 from pathlib import Path
-from typing import Callable, TypeVar
+from typing import Callable, TypeVar, Union, Optional, Any
 
 from arclet.alconna import (
     Alconna,
@@ -24,12 +24,25 @@ from arclet.alconna import (
 )
 from arclet.alconna.base import Help, Shortcut, Completion
 from arclet.alconna.exceptions import SpecialOptionTriggered
+from typing_extensions import TypeAlias
 
 from .formatter import RichConsoleFormatter, ShellTextFormatter
 
 cli_instance: ContextVar[CommandLine] = ContextVar("litecli")
 
 pattern = re.compile(r"(?P<module>[\w.]+)\s*" r"(:\s*(?P<attr>[\w.]+))?\s*$")
+
+
+Callback: TypeAlias = Union[str, None, Callable[[Optional["Next"]], Optional[str]]]
+Next: TypeAlias = Callable[[Optional[Callback]], Optional[str]]
+Middleware: TypeAlias = Callable[[Arparma, Next], Optional[str]]
+Queue: TypeAlias = list[Callable[[Optional[Next]], Optional[str]]]
+
+
+def compose(callback: Callback, next_: Optional[Next]):
+    if callable(callback):
+        return callback(next_)
+    return callback
 
 
 def handle_argv():
@@ -109,13 +122,15 @@ class BasePlugin(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def dispatch(self, result: Arparma) -> bool | None:
+    def dispatch(self, result: Arparma, next_: Next) -> str | None:
         """
-        插件的主要逻辑
+        插件的处理方法, 该方法会在命令行解析完成后调用
 
-        若返回 True, 则表示插件继续传播
-        若返回 None, 则表示插件传播结束
-        若返回 False, 则表示命令执行结束
+        Args:
+            result (Arparma): 解析结果
+            next_ (Next): 下一个插件的回调函数
+        Returns:
+            str | None: 返回值为 str 时将打印该字符串
         """
 
 
@@ -279,6 +294,27 @@ class CommandLine:
     def help(self):
         return self._command.get_help()
 
+    def _handle_dispatch(self, res: Arparma):
+        queue: Queue = [
+            functools.partial(plg.dispatch, res)  # type: ignore
+            for plg in sorted(self.plugins.values(), key=lambda x: x.metadata.priority)
+        ]
+        index = 0
+
+        def _next(callback: Optional[Callback] = None) -> Optional[str]:
+            nonlocal index
+            try:
+                if callback is not None:
+                    queue.append(lambda next_: compose(callback, next_))
+                index += 1
+                if index > len(queue):
+                    return None
+                return queue[index - 1](_next)
+            except Exception as e:
+                print(repr(e))
+
+        return _next()
+
     def main(self, *args: str):
         if self.load_preset:
             self.preset()
@@ -300,13 +336,10 @@ class CommandLine:
         if res.non_component and not res.all_matched_args:
             return print(self.help)
         with self.using():
-            for plg in sorted(self.plugins.values(), key=lambda x: x.metadata.priority):
-                ans = plg.dispatch(res)
-                if ans is None:
-                    break
-                if not ans:
-                    return
-            self.callback(res)
+            if ans := self._handle_dispatch(res):
+                print(ans)
+            else:
+                self.callback(res)
 
 
 __all__ = ["PluginMetadata", "BasePlugin", "CommandLine", "register"]

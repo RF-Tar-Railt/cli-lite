@@ -18,7 +18,7 @@ class ShellTextFormatter(_ShellFormatter):
             trace.head,
             trace.args,
             trace.separators,
-            [*self.__class__.global_options, *trace.body],
+            [*trace.body, *self.__class__.global_options],
             trace.shortcuts
         )
         return super().format(new_trace)
@@ -35,7 +35,7 @@ class RichConsoleFormatter(_RichFormatter):
             trace.head,
             trace.args,
             trace.separators,
-            [*self.__class__.global_options, *trace.body],
+            [*trace.body, *self.__class__.global_options],
             trace.shortcuts
         )
         return super().format(new_trace)

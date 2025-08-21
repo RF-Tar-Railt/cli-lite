@@ -5,20 +5,14 @@ import os
 from pprint import pprint
 from pathlib import Path
 from typing import Any
-from arclet.alconna import Alconna, Arparma, CommandMeta, Option
+from arclet.alconna import Alconna, Arparma, CommandMeta, Option, Subcommand
 from .core import register, BasePlugin, PluginMetadata, CommandLine
 
 
 @register("*")
 class Version(BasePlugin):
-    def init(self) -> Alconna | str:
-        return "version"
-
-    @classmethod
-    def supply_options(cls) -> list[Option] | None:
-        return [
-            Option("--version|-V", help_text="show the version and exit")
-        ]
+    def init(self):
+        return Option("--version|-V", help_text="show the version and exit"), False
 
     def dispatch(self, result: Arparma):
         if result.find("version"):
@@ -45,8 +39,8 @@ class Cache(BasePlugin):
                 self.data.update(json.load(f_obj))
         return Alconna(
             "cache",
-            Option("clear", help_text="清理缓存"),
-            Option("show", help_text="显示内容"),
+            Subcommand("clear", help_text="清理缓存"),
+            Subcommand("show", help_text="显示内容"),
             meta=CommandMeta("管理缓存")
         )
 
@@ -76,7 +70,3 @@ class Cache(BasePlugin):
     def save(self):
         with self.path.open('w+', encoding='UTF-8') as f_obj:
             json.dump(self.data, f_obj, ensure_ascii=False, indent=4)
-
-    @classmethod
-    def supply_options(cls) -> list[Option] | None:
-        return

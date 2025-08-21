@@ -75,16 +75,14 @@ class BasePlugin(metaclass=ABCMeta):
             self.command.prefixes = []
             self.command.options = [opt for opt in self.command.options if not isinstance(opt, (Help, Shortcut, Completion))]
 
-            self.command.meta.fuzzy_match = (
-                ns.fuzzy_match or self.command.meta.fuzzy_match
-            )
-            self.command.meta.raise_exception = (
-                ns.raise_exception or self.command.meta.raise_exception
-            )
+            self.command.meta.fuzzy_match = ns.fuzzy_match or self.command.meta.fuzzy_match
+            self.command.meta.raise_exception = ns.raise_exception or self.command.meta.raise_exception
             self.command._hash = self.command._calc_hash()
             command_manager.register(self.command)
         else:
-            self.name: str = command
+            self.name: str = command[0].name
+            self.option: Option = command[0]
+            self.show_in_subcommand: bool = command[1]
 
     @property
     def local(self):
@@ -95,13 +93,13 @@ class BasePlugin(metaclass=ABCMeta):
         return module
 
     @abstractmethod
-    def init(self) -> Alconna | str:
+    def init(self) -> Alconna | tuple[Option, bool]:
         """
         插件创建方法, 该方法只会调用一次
 
         若返回 Alconna, 则表示创建一个新的子命令, 该子命令的名称为插件的名称
 
-        若返回 str, 则表示该插件不创建子命令, 该 str 会成为插件的名称
+        若返回 tuple[Option, bool], 则表示该插件向全局命令行添加一个选项, 其中 bool 值表示是否在子命令中显示该选项
         """
 
     @abstractmethod
@@ -118,13 +116,6 @@ class BasePlugin(metaclass=ABCMeta):
         若返回 True, 则表示插件继续传播
         若返回 None, 则表示插件传播结束
         若返回 False, 则表示命令执行结束
-        """
-
-    @classmethod
-    @abstractmethod
-    def supply_options(cls) -> list[Option] | None:
-        """
-        为主命令提供额外的选项
         """
 
 
@@ -205,17 +196,17 @@ class CommandLine:
             self.plugins[cls] = cls  # type: ignore
 
     def load_all(self):
-        for plg in self.plugins:
-            if _opts := plg.supply_options():
-                self.formatter_type.global_options.extend(_opts)
-                for _opt in _opts:
-                    self._command.add(_opt)
         with self.using():
             plgs: list[BasePlugin] = [cls() for cls in self.plugins]
             for plg in plgs:
                 self.plugins[plg.__class__] = plg
                 if hasattr(plg, "command") and isinstance(plg.command, Alconna):
                     self._command.add(plg.command)
+                elif hasattr(plg, "option") and isinstance(plg.option, Option):
+                    with command_manager.update(self._command):
+                        self._command.options.insert(0, plg.option)
+                    if getattr(plg, "show_in_subcommand", False):
+                        self.formatter_type.global_options.insert(0, plg.option)
 
     def preset(self):
         for cls in _storage.get(self._command.command, []) + _storage.get("*", []):

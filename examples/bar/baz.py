@@ -6,7 +6,7 @@ from arclet.alconna import Alconna, Arparma, Args, Option
 
 class MyPlugin2(BasePlugin):
 
-    def init(self) -> Alconna | str:
+    def init(self):
         return Alconna(
             self.local,
             Args["name/", str],
@@ -18,9 +18,3 @@ class MyPlugin2(BasePlugin):
     def dispatch(self, result: Arparma) -> bool | None:
         print(f"Hello! {result.name}")
         return True
-
-    @classmethod
-    def supply_options(cls) -> list[Option] | None:
-        return [
-            Option("--test")
-        ]

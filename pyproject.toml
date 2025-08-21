@@ -6,11 +6,11 @@ authors = [
     {name = "RF-Tar-Railt",email = "rf_tar_railt@qq.com"}
 ]
 dependencies = [
-    "arclet-alconna>=1.8.30",
-    "arclet-alconna-tools>=0.7.9",
+    "arclet-alconna>=1.8.43",
+    "arclet-alconna-tools>=0.7.11",
     "importlib-metadata>=3.6.0",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 readme = "README.md"
 license = {text = "MIT"}
 keywords = ["commandline", "cli-tool", "plugin", "cli", "litecli"]
@@ -33,10 +33,11 @@ Source = "https://github.com/RF-Tar-Railt/cli-lite"
 [tool.pdm.build]
 includes = ["clilte"]
 
-[tool.pdm.dev-dependencies]
-dev = [
-    "fix-future-annotations>=0.5.0",
-]
 [build-system]
 requires = ["pdm.backend"]
 build-backend = "pdm.backend"
+
+[dependency-groups]
+dev = [
+    "fix-future-annotations>=0.5.0",
+]

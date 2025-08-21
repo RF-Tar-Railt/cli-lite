@@ -299,22 +299,21 @@ class CommandLine:
             functools.partial(plg.dispatch, res)  # type: ignore
             for plg in sorted(self.plugins.values(), key=lambda x: x.metadata.priority)
         ]
+        index = 0
 
         def _next(callback: Optional[Callback] = None) -> Optional[str]:
-            if callback is not None:
-                queue.append(lambda next_: compose(callback, next_))
-            return None
-
-        while queue:
+            nonlocal index
             try:
-                current_handler = queue.pop(0)
-                result = current_handler(_next)
-                if result is not None:
-                    return result
+                if callback is not None:
+                    queue.append(lambda next_: compose(callback, next_))
+                index += 1
+                if index > len(queue):
+                    return None
+                return queue[index - 1](_next)
             except Exception as e:
                 print(repr(e))
 
-        return None
+        return _next()
 
     def main(self, *args: str):
         if self.load_preset:

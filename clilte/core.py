@@ -314,7 +314,7 @@ class CommandLine:
                     return None
                 return queue[index - 1](_next)
             except Exception as e:
-                print(repr(e))
+                self.exception_printer(e)
 
         return _next()
 

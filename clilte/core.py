@@ -11,7 +11,7 @@ from contextvars import ContextVar
 from dataclasses import InitVar, dataclass, field
 from importlib_metadata import entry_points
 from pathlib import Path
-from typing import Callable, TypeVar, Union, Optional, Any
+from typing import Callable, TypeVar, Union, Optional
 
 from arclet.alconna import (
     Alconna,
@@ -139,7 +139,7 @@ TPlugin = TypeVar("TPlugin", bound=BasePlugin)
 
 
 def register(target: str):
-    def wrapper(cls: type[BasePlugin]):
+    def wrapper(cls: type[TPlugin]) -> type[TPlugin]:
         _storage.setdefault(target, []).append(cls)
         return cls
 
@@ -158,6 +158,9 @@ class CommandLine:
     _command: Alconna = field(init=False)
     callback: Callable[[Arparma], None] = field(
         default_factory=lambda: (lambda x: None), init=False
+    )
+    exception_printer: Callable[[Exception], None] = field(
+        default_factory=lambda: lambda e: print(repr(e)), init=False
     )
     formatter_type: type[ShellTextFormatter | RichConsoleFormatter] = field(init=False)
 
@@ -332,7 +335,7 @@ class CommandLine:
         if not res.matched:
             if isinstance(res.error_info, SpecialOptionTriggered):
                 return
-            return print(res.error_info)
+            return self.exception_printer(res.error_info)  # type: ignore
         if res.non_component and not res.all_matched_args:
             return print(self.help)
         with self.using():
